@@ -1218,15 +1218,17 @@ tbody tr.selected-row {
 .page-root {
   display: flex;
   flex-direction: column;
-  min-height: 100vh;
+  height: 100dvh;
+  overflow: hidden;
   background: #f7f9fb;
 }
 
 .page-body {
   display: flex;
   flex: 1;
+  min-height: 0;
   overflow: hidden;
-  height: calc(100vh - 82px); /* Subtract topbar height */
+  position: relative;
 }
 
 .page-main {
@@ -1602,8 +1604,8 @@ tbody tr.selected-row {
   .chat-panel {
     position: absolute;
     right: 0;
-    top: 82px;
-    height: calc(100vh - 82px);
+    top: 0;
+    height: 100%;
     z-index: 50;
     box-shadow: -4px 0 16px rgba(0,0,0,0.08);
   }
