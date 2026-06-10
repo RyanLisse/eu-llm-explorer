@@ -12,7 +12,7 @@ export async function GET() {
     const client = createClient({ url: normalizedUrl, authToken: process.env.TURSO_AUTH_TOKEN });
     const r = await client.execute("SELECT COUNT(*) as c FROM model_routes");
     client.close();
-    directTest = `OK: ${r.rows[0].c} rows`;
+    directTest = `OK: ${r.rows[0]?.c} rows`;
   } catch (e) {
     directTest = `FAIL: ${String(e)}`;
   }
