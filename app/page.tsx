@@ -5,7 +5,13 @@ import { PageShell } from "./PageShell";
 export const dynamic = "force-dynamic";
 
 export default async function Page() {
-  const data = await loadExplorerData();
+  let data;
+  try {
+    data = await loadExplorerData();
+  } catch (e) {
+    console.error("[page] loadExplorerData failed:", e);
+    throw e;
+  }
 
   return <PageShell data={data} />;
 }
