@@ -90,16 +90,8 @@ const chartConfig = {
 
 export function Explorer({
   routes,
-  providerCoverage,
-  providerCoverageSummaries,
-  vendorScope,
-  multiVendorModels,
 }: {
   readonly routes: ReadonlyArray<RouteView>;
-  readonly providerCoverage: ReadonlyArray<ProviderCoverageView>;
-  readonly providerCoverageSummaries: ReadonlyArray<ProviderCoverageSummaryView>;
-  readonly vendorScope: ReadonlyArray<VendorScopeView>;
-  readonly multiVendorModels: ReadonlyArray<MultiVendorModelView>;
 }) {
   const filters = useAtomValue(filterAtom);
   const setFilters = useAtomSet(filterAtom);
@@ -243,35 +235,29 @@ export function Explorer({
 
   return (
     <section className="explorer-shell">
-      <Card className="exec-hero">
-        <CardContent className="hero-content">
-          <div>
-            <div className="eyebrow">Interactive EU AI gateway explorer</div>
-            <h2>Choose a compliant provider route before choosing a model</h2>
-            <p>
-              General-purpose AI routing for classification, extraction, RAG, drafting, reasoning, and fallback design.
-              Filter by vendor, sovereignty tier, workload, price, and reliability.
-            </p>
-          </div>
-          <div className="hero-actions" aria-label="Filter presets">
-            <Button onClick={() => applyPreset("sovereign")}>
-              <ShieldCheck aria-hidden="true" />
-              Sovereign
-            </Button>
-            <Button variant="outline" onClick={() => applyPreset("open")}>
-              <Weight aria-hidden="true" />
-              Open-weight
-            </Button>
-            <Button variant="outline" onClick={() => applyPreset("reasoning")}>
-              <Brain aria-hidden="true" />
-              Reasoning
-            </Button>
-            <Button variant="ghost" onClick={() => applyPreset("default")} aria-label="Reset filters">
-              <RotateCcw aria-hidden="true" />
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
+      <div className="hero-bar">
+        <div>
+          <div className="eyebrow">Interactive EU AI gateway explorer</div>
+          <h2>Choose a compliant route before choosing a model</h2>
+        </div>
+        <div className="hero-actions" aria-label="Filter presets">
+          <Button onClick={() => applyPreset("sovereign")}>
+            <ShieldCheck aria-hidden="true" />
+            Sovereign
+          </Button>
+          <Button variant="outline" onClick={() => applyPreset("open")}>
+            <Weight aria-hidden="true" />
+            Open-weight
+          </Button>
+          <Button variant="outline" onClick={() => applyPreset("reasoning")}>
+            <Brain aria-hidden="true" />
+            Reasoning
+          </Button>
+          <Button variant="ghost" onClick={() => applyPreset("default")} aria-label="Reset filters">
+            <RotateCcw aria-hidden="true" />
+          </Button>
+        </div>
+      </div>
 
       <div className="metric-grid" aria-label="Route summary">
         <MetricCard label="Routes shown" value={visible.length.toString()} detail={`${nonRejected.length} usable for sensitive workloads`} />
@@ -279,13 +265,6 @@ export function Explorer({
         <MetricCard label="Avg reliability" value={averageReliability ? averageReliability.toString() : "-"} detail="Visible non-rejected routes" />
         <MetricCard label="Fastest visible" value={fastest ? `${fastest.throughput} t/s` : "-"} detail={fastest?.name ?? "No route"} />
       </div>
-
-      <ProviderCoverageSection
-        summaries={providerCoverageSummaries}
-        coverage={providerCoverage}
-        vendorScope={vendorScope}
-        overlaps={multiVendorModels}
-      />
 
       <div className="decision-grid">
         <aside className="control-rail" aria-label="Explorer filters">
@@ -568,7 +547,7 @@ export function Explorer({
   );
 }
 
-function ProviderCoverageSection({
+export function ProviderCoverageSection({
   summaries,
   coverage,
   vendorScope,

@@ -497,33 +497,23 @@ tbody tr.selected-row {
   display: grid;
   gap: 14px;
 }
-.exec-hero {
-  display: block;
-  overflow: hidden;
-  border-color: var(--line);
-  background: linear-gradient(135deg, var(--bg-card) 0%, rgba(255,205,0,0.04) 100%);
+.hero-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  flex-wrap: wrap;
+  padding: 14px 18px;
   border: 1px solid var(--line);
   border-radius: 8px;
+  background: linear-gradient(135deg, var(--bg-card) 0%, rgba(255,205,0,0.04) 100%);
 }
-.hero-content {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  gap: 18px;
-  align-items: end;
-  padding: 22px;
-}
-.exec-hero h2 {
-  max-width: 780px;
-  font-size: 27px;
+.hero-bar h2 {
+  font-size: 19px;
   font-family: var(--font-head);
   color: var(--ink);
-  letter-spacing: -0.02em;
-}
-.exec-hero p {
-  max-width: 760px;
-  margin: 8px 0 0;
-  color: var(--ink-soft);
-  font-size: 13.5px;
+  letter-spacing: -0.01em;
+  margin-top: 3px;
 }
 .hero-actions {
   display: flex;
@@ -1107,10 +1097,17 @@ tbody tr.selected-row {
   text-transform: uppercase !important;
   letter-spacing: 0.06em !important;
 }
-[data-slot="tabs-trigger"][data-state="active"] {
+[data-slot="tabs-trigger"][data-state="active"],
+[data-slot="tabs-trigger"][data-selected] {
   background: var(--bg-raised) !important;
   color: var(--blinqx) !important;
   box-shadow: none !important;
+}
+[data-slot="tabs-trigger"]:hover {
+  color: var(--ink-soft) !important;
+}
+[data-slot="tabs-trigger"][data-selected]:hover {
+  color: var(--blinqx) !important;
 }
 
 /* ── Scrollbars ─────────────────────────────────────── */
@@ -1202,7 +1199,37 @@ tbody tr.selected-row {
 .page-main {
   flex: 1 1 0;
   min-width: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* ── Main tabs ──────────────────────────────────────── */
+.main-tabs {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+.main-tabs-bar {
+  flex: 0 0 auto;
+  padding: 10px 18px;
+  border-bottom: 1px solid var(--line);
+  background: var(--bg-soft);
+}
+.main-tabs-bar [data-slot="tabs-list"] {
+  gap: 4px;
+  background: var(--bg-input) !important;
+  border-radius: 8px;
+}
+.main-tab-panel {
+  flex: 1;
+  min-height: 0;
   overflow-y: auto;
+}
+.main-tab-panel .wrap {
+  padding-top: 16px;
 }
 
 /* ── Chat toggle button ─────────────────────────────── */
@@ -1566,9 +1593,6 @@ tbody tr.selected-row {
 
 /* ── Research briefing ──────────────────────────────── */
 .research {
-  margin-top: 48px;
-  padding-top: 36px;
-  border-top: 1px solid var(--line);
   display: grid;
   gap: 28px;
 }
@@ -2057,8 +2081,6 @@ tbody tr.selected-row {
 }
 
 @media (max-width: 1100px) {
-  .exec-hero,
-  .hero-content,
   .decision-grid,
   .analysis-grid { grid-template-columns: 1fr; }
   .control-rail { position: static; }
@@ -2075,7 +2097,7 @@ tbody tr.selected-row {
   .topbar h1 { font-size: 18px; }
   .topbar .sub { font-size: 10px; }
   .wrap { padding: 14px 12px 56px; }
-  .exec-hero h2 { font-size: 22px; }
+  .hero-bar h2 { font-size: 16px; }
   .metric-grid,
   .rank-grid,
   .coverage-summary-grid,

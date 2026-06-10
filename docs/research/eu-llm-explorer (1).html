@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>EU-soevereine LLM-verkenner · juni 2026</title>
+<style>
+  :root{
+    --bg:#ffffff; --bg2:#f6f7f9; --bg3:#eef0f3; --text:#1c1d20; --text2:#5f636b; --text3:#8a8f98;
+    --border:#e3e5ea; --border2:#cfd3da; --navy:#1f3a5f;
+    --a:#1D9E75; --a-bg:#E1F5EE; --a-fg:#0F6E56;
+    --b:#378ADD; --b-bg:#E6F1FB; --b-fg:#0C447C;
+    --c:#A32D2D; --c-bg:#FCEBEB; --c-fg:#791F1F;
+    --reason-bg:#EEEDFE; --reason-fg:#3C3489;
+    --nonr-bg:#FAEEDA; --nonr-fg:#854F0B;
+    --conf-bg:#E1F5EE; --conf-fg:#0F6E56;
+    --ref:#D85A30;
+  }
+  @media(prefers-color-scheme:dark){
+    :root{
+      --bg:#16181c; --bg2:#1d2025; --bg3:#23272e; --text:#e8eaed; --text2:#aeb3bb; --text3:#7c818a;
+      --border:#2c3038; --border2:#3a3f49; --navy:#9db4d4;
+      --a:#5DCAA5; --a-bg:#0f3a2e; --a-fg:#9FE1CB;
+      --b:#85B7EB; --b-bg:#0c2c4c; --b-fg:#B5D4F4;
+      --c:#F09595; --c-bg:#3a1414; --c-fg:#F7C1C1;
+      --reason-bg:#26215c; --reason-fg:#CECBF6;
+      --nonr-bg:#412402; --nonr-fg:#FAC775;
+      --conf-bg:#0f3a2e; --conf-fg:#9FE1CB;
+    }
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--text);
+    font-family:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+    line-height:1.5;-webkit-font-smoothing:antialiased}
+  .wrap{max-width:860px;margin:0 auto;padding:28px 18px 64px}
+  h1{font-size:22px;font-weight:600;margin:0 0 4px}
+  .sub{font-size:13px;color:var(--text2);margin:0 0 4px}
+  .meta{font-size:12px;color:var(--text3);margin:0 0 18px}
+  .panel{border:0.5px solid var(--border);border-radius:12px;padding:11px 13px;background:var(--bg2)}
+  .lbl{font-size:12px;color:var(--text2);margin-bottom:8px;font-weight:500}
+  .grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:11px;margin:0 0 11px}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:11px;margin:0 0 11px}
+  .chip{display:inline-flex;align-items:center;gap:5px;padding:5px 10px;border-radius:8px;
+    border:0.5px solid var(--border2);font-size:12.5px;cursor:pointer;background:transparent;color:var(--text);transition:all .12s}
+  .chip.off{color:var(--text3)}
+  .chip:hover{border-color:var(--text3)}
+  .dot{width:8px;height:8px;border-radius:50%;display:inline-block}
+  select,input[type=range]{width:100%}
+  select{padding:6px 8px;border-radius:8px;border:0.5px solid var(--border2);font-size:13px;background:var(--bg);color:var(--text)}
+  input[type=range]{accent-color:var(--b)}
+  svg{display:block;width:100%;height:auto}
+  table{width:100%;border-collapse:collapse;font-size:12.5px;margin-top:6px}
+  th{padding:7px 8px;text-align:left;font-weight:500;color:var(--text2);border-bottom:0.5px solid var(--border2)}
+  td{padding:7px 8px;vertical-align:top;border-bottom:0.5px solid var(--border)}
+  .pill{font-size:10.5px;padding:1px 6px;border-radius:5px;font-weight:500;white-space:nowrap}
+  .badge{font-size:9.5px;margin-left:5px;padding:1px 5px;border-radius:5px;background:var(--reason-bg);color:var(--reason-fg);font-weight:500;vertical-align:middle}
+  .note{font-size:10.5px;color:var(--text3);margin-top:1px;line-height:1.45}
+  .caption{font-size:11px;color:var(--text3);margin-top:10px;line-height:1.6}
+  .rejbox{border:0.5px solid var(--c);background:var(--c-bg);border-radius:12px;padding:11px 13px;margin-top:16px}
+  .rejttl{font-size:12px;font-weight:600;color:var(--c-fg);margin-bottom:6px}
+  .rejrow{font-size:11.5px;color:var(--text2);margin:3px 0;line-height:1.5}
+  @media(max-width:580px){.grid3,.grid2{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>EU-soevereine LLM-verkenner</h1>
+  <p class="sub">Prijs vs snelheid voor een AI-mailagent, met harde EU-eis. Linksboven = goedkoop &amp; snel.</p>
+  <p class="meta">Data per juni 2026 · prijzen $/1M tokens (mix USD/EUR) · TTFT &amp; throughput zijn mediaan-benchmarks (Artificial Analysis / vendor) · stippellijn = gpt-5-mini referentie</p>
+
+  <div class="grid3" id="row1"></div>
+  <div class="grid2" id="row2"></div>
+  <div class="panel" id="rowVendor" style="margin:0 0 11px"></div>
+  <div class="panel" id="rowSearch" style="margin:0 0 11px"></div>
+
+  <div class="panel" style="padding:10px 6px 6px">
+    <svg id="scatter" viewBox="0 0 680 360" role="img" aria-label="Scatterplot van EU-gehoste modellen: verticaal prijs (hoger=goedkoper), horizontaal snelheid (rechts=sneller), kleur per soevereiniteitstier."></svg>
+  </div>
+
+  <div style="overflow-x:auto">
+    <table id="tbl">
+      <thead><tr>
+        <th>Model</th><th>EU-route</th><th>Tier</th><th>Modus</th>
+        <th style="text-align:right">In</th><th style="text-align:right">Uit</th>
+        <th style="text-align:right">t/s</th><th style="text-align:right">TTFT</th>
+      </tr></thead>
+      <tbody id="tbody"></tbody>
+    </table>
+    <div class="caption" id="caption"></div>
+  </div>
+
+  <div id="rejected"></div>
+</div>
+
+<script>
+(function(){
+  var REF={blended:(0.25+2.0)/2, speed:101};
+  var TIER={
+    A:{c:"var(--a)",bg:"var(--a-bg)",fg:"var(--a-fg)",hex:"#1D9E75",label:"A · EU-soeverein"},
+    B:{c:"var(--b)",bg:"var(--b-bg)",fg:"var(--b-fg)",hex:"#378ADD",label:"B · EU-residency (VS)"},
+    C:{c:"var(--c)",bg:"var(--c-bg)",fg:"var(--c-fg)",hex:"#A32D2D",label:"C · afgewezen"}
+  };
+  var MODE={
+    reasoning:{bg:"var(--reason-bg)",fg:"var(--reason-fg)",label:"reasoning"},
+    "non-reasoning":{bg:"var(--nonr-bg)",fg:"var(--nonr-fg)",label:"non-reasoning"},
+    configurable:{bg:"var(--conf-bg)",fg:"var(--conf-fg)",label:"configureerbaar"}
+  };
+
+  // ── Refreshed June 2026 data ──
+  var M=[
+    // Tier A — EU sovereign (Mistral figures from Artificial Analysis, Apr/May 2026)
+    {name:"Mistral Small 4",maker:"Mistral",route:"Mistral La Plateforme (FR)",tier:"A",mode:"non-reasoning",open:"open-weight",inP:0.15,outP:0.60,speed:172,ttft:0.66,latest:true,note:"Apache 2.0. Beste soevereine werkpaard (Intelligence 28)."},
+    {name:"Mistral Small 3.2",maker:"Mistral",route:"OVHcloud / Scaleway (FR)",tier:"A",mode:"non-reasoning",open:"open-weight",inP:0.06,outP:0.18,speed:165,ttft:0.65,note:"Goedkoopste capabele Mistral; output 55% onder gpt-5-nano."},
+    {name:"Ministral 3 8B",maker:"Mistral",route:"Mistral La Plateforme (FR)",tier:"A",mode:"non-reasoning",open:"open-weight",inP:0.10,outP:0.10,speed:170,ttft:0.55,note:"Classificatie/extractie/intent."},
+    {name:"Ministral 3 3B",maker:"Mistral",route:"Mistral / OVH (FR)",tier:"A",mode:"non-reasoning",open:"open-weight",inP:0.04,outP:0.04,speed:187,ttft:0.50,note:"Snelste + goedkoopste Mistral. Routing/triage."},
+    {name:"Mistral Medium 3.5",maker:"Mistral",route:"Mistral / Scaleway (FR)",tier:"A",mode:"configurable",open:"open-weight",inP:0.40,outP:2.00,speed:155,ttft:1.10,latest:true,note:"Hoogste Mistral-kwaliteit (Index 39). Toggle reasoning."},
+    {name:"Mistral Large 3",maker:"Mistral",route:"Mistral / Scaleway / Bedrock EU",tier:"A",mode:"non-reasoning",open:"open-weight",inP:0.50,outP:1.50,speed:206,ttft:1.10,latest:true,note:"Frontier-klasse, 262K context. Goedkoopste in zijn tier."},
+    {name:"Magistral Medium 1.2",maker:"Mistral",route:"Mistral La Plateforme (FR)",tier:"A",mode:"reasoning",open:"proprietary",inP:2.00,outP:5.00,speed:120,ttft:1.5,latest:true,note:"Dedicated reasoning, soeverein. Rivaliseert o3."},
+    {name:"Magistral Small 1.2",maker:"Mistral",route:"Mistral / Scaleway (FR)",tier:"A",mode:"reasoning",open:"open-weight",inP:0.50,outP:1.50,speed:130,ttft:1.2,note:"Open-weight reasoning, prijs = Large 3."},
+    {name:"gpt-oss-20b",maker:"OpenAI OSS",route:"OVHcloud (FR)",tier:"A",mode:"configurable",open:"open-source",inP:0.04,outP:0.15,speed:307,ttft:0.45,note:"Apache 2.0. Laagste EUR-prijs. Reasoning toggle."},
+    {name:"gpt-oss-120b",maker:"OpenAI OSS",route:"Scaleway / OVH / STACKIT",tier:"A",mode:"configurable",open:"open-source",inP:0.15,outP:0.60,speed:300,ttft:0.40,latest:true,note:"Goedkoopste capabele soevereine redeneerder."},
+    {name:"Llama 3.3 70B",maker:"Meta",route:"STACKIT / OVH / IONOS",tier:"A",mode:"non-reasoning",open:"open-weight",inP:0.45,outP:0.65,speed:120,ttft:0.9,note:"Llama Community licentie. Breed gehost."},
+    {name:"Qwen3.5-397B-A17B",maker:"Alibaba",route:"OVHcloud / Scaleway (FR)",tier:"A",mode:"reasoning",open:"open-source",inP:0.60,outP:3.60,speed:90,ttft:1.4,latest:true,note:"Frontier open-weight reasoning (Apache 2.0)."},
+    {name:"DeepSeek V3.2",maker:"DeepSeek",route:"Nebius / Scaleway (EU)",tier:"A",mode:"configurable",open:"open-weight",inP:0.28,outP:0.42,speed:220,ttft:0.9,latest:true,note:"Via Nebius (NL/EU) of Scaleway, zero-retention."},
+
+    // Tier B — EU residency (US vendor)
+    {name:"gpt-5-nano",maker:"OpenAI",route:"Azure EU Data Zone (SE)",tier:"B",mode:"configurable",open:"proprietary",inP:0.05,outP:0.40,speed:150,ttft:0.85,note:"Residency via Sweden Central. CLOUD Act blijft."},
+    {name:"gpt-5-mini (referentie)",maker:"OpenAI",route:"Azure EU Data Zone (SE)",tier:"B",mode:"configurable",open:"proprietary",inP:0.25,outP:2.00,speed:101,ttft:1.0,note:"Baseline. Minimal reasoning ~101 t/s."},
+    {name:"gpt-5.4-nano",maker:"OpenAI",route:"Azure EU Data Zone (zodra beschikbaar)",tier:"B",mode:"configurable",open:"proprietary",inP:0.20,outP:1.25,speed:230,ttft:0.7,latest:true,note:"Mrt 2026. Nog niet in EU Data Zone — verifieer."},
+    {name:"Gemini 2.5 Flash-Lite",maker:"Google",route:"Vertex europe-west4 (NL)",tier:"B",mode:"configurable",open:"proprietary",inP:0.10,outP:0.40,speed:214,ttft:0.29,note:"Beste prijs/snelheid B-tier. Thinking uit zetten."},
+    {name:"Gemini 3.1 Flash-Lite",maker:"Google",route:"Vertex europe-west4 (NL)",tier:"B",mode:"configurable",open:"proprietary",inP:0.25,outP:1.50,speed:230,ttft:0.40,latest:true,note:"Feb 2026. Slimmer dan 2.5, iets duurder."},
+    {name:"Claude Haiku 4.5",maker:"Anthropic",route:"AWS Bedrock EU (Frankfurt)",tier:"B",mode:"non-reasoning",open:"proprietary",inP:1.00,outP:5.00,speed:100,ttft:0.7,note:"Bedrock EU heeft residency; Azure Foundry niet."},
+    {name:"Claude Sonnet 4.6",maker:"Anthropic",route:"AWS Bedrock EU / Vertex EU",tier:"B",mode:"configurable",open:"proprietary",inP:3.00,outP:15.00,speed:90,ttft:0.9,latest:true,note:"Hybride extended thinking. Escalatiepad."},
+    {name:"Amazon Nova Lite",maker:"Amazon",route:"AWS Bedrock EU",tier:"B",mode:"non-reasoning",open:"proprietary",inP:0.06,outP:0.24,speed:160,ttft:0.6,note:"Zeer goedkoop, residency."},
+
+    // Tier C — rejected for sensitive mail
+    {name:"Llama 3.3 70B (Groq)",maker:"Meta",route:"Groq publieke API",tier:"C",mode:"non-reasoning",open:"open-weight",inP:0.59,outP:0.79,speed:314,ttft:0.92,note:"EU-DC Helsinki bestaat, maar publieke API niet hard-EU. VS-entiteit."},
+    {name:"Llama 3.1 8B (Groq)",maker:"Meta",route:"Groq publieke API",tier:"C",mode:"non-reasoning",open:"open-weight",inP:0.05,outP:0.08,speed:840,ttft:0.30,note:"Extreem snel, maar niet hard-EU op default endpoint."},
+    {name:"Cerebras (CS-3 cloud)",maker:"Cerebras",route:"Cerebras inference cloud",tier:"C",mode:"configurable",open:"open-weight",inP:0.60,outP:0.80,speed:2000,ttft:0.17,note:"'for Nations' = overheid/on-prem. Publieke cloud VS-gehost."}
+  ];
+  var MAKERS=["Mistral","OpenAI OSS","OpenAI","Meta","Google","Anthropic","Amazon","Alibaba","DeepSeek","Cerebras"];
+  var bl=function(m){return (m.inP+m.outP)/2;};
+
+  var state={tiers:{A:true,B:true,C:false},modes:{reasoning:true,"non-reasoning":true,configurable:true},
+             makers:{},search:"",openOnly:false,maxBl:8,metric:"throughput",sort:"blended"};
+  MAKERS.forEach(function(m){state.makers[m]=true;});
+
+  function t(s){return document.createTextNode(s);}
+  function svgEl(tag,a,k){var e=document.createElementNS("http://www.w3.org/2000/svg",tag);a=a||{};for(var x in a)e.setAttribute(x,a[x]);(k||[]).forEach(function(c){e.appendChild(typeof c==="string"?t(c):c);});return e;}
+  function h(tag,a,k){var e=document.createElement(tag);a=a||{};for(var x in a){if(x==="class")e.className=a[x];else if(x==="html")e.innerHTML=a[x];else e.setAttribute(x,a[x]);}(k||[]).forEach(function(c){e.appendChild(typeof c==="string"?t(c):c);});return e;}
+
+  function controls(){
+    var r1=document.getElementById("row1");r1.innerHTML="";
+    var r2=document.getElementById("row2");r2.innerHTML="";
+
+    // tier
+    var pT=h("div",{class:"panel"},[h("div",{class:"lbl"},["Soevereiniteit"])]);
+    var tw=h("div",{style:"display:flex;flex-wrap:wrap;gap:6px"});
+    ["A","B","C"].forEach(function(k){
+      var on=state.tiers[k];
+      var btn=h("button",{class:"chip"+(on?"":" off"),style:"border-color:"+(on?TIER[k].hex:"var(--border2)")+";background:"+(on?TIER[k].hex+"22":"transparent")+";font-weight:"+(on?600:400)},[
+        h("span",{class:"dot",style:"background:"+TIER[k].hex+";opacity:"+(on?1:.35)}),TIER[k].label]);
+      btn.onclick=function(){state.tiers[k]=!state.tiers[k];render();};
+      tw.appendChild(btn);
+    });
+    pT.appendChild(tw);r1.appendChild(pT);
+
+    // mode
+    var pM=h("div",{class:"panel"},[h("div",{class:"lbl"},["Reasoning-modus"])]);
+    var mw=h("div",{style:"display:flex;flex-wrap:wrap;gap:6px"});
+    ["non-reasoning","configurable","reasoning"].forEach(function(k){
+      var on=state.modes[k];
+      var btn=h("button",{class:"chip"+(on?"":" off"),style:"border-color:"+(on?MODE[k].fg:"var(--border2)")+";background:"+(on?MODE[k].bg:"transparent")+";font-weight:"+(on?600:400)+";color:"+(on?MODE[k].fg:"var(--text3)")},[MODE[k].label]);
+      btn.onclick=function(){state.modes[k]=!state.modes[k];render();};
+      mw.appendChild(btn);
+    });
+    pM.appendChild(mw);r1.appendChild(pM);
+
+    // openness + x-axis metric
+    var pO=h("div",{class:"panel"},[h("div",{class:"lbl"},["Openheid & x-as"])]);
+    var ow=h("div",{style:"display:flex;flex-wrap:wrap;gap:6px"});
+    var bo=h("button",{class:"chip"+(state.openOnly?"":" off"),style:"border-color:"+(state.openOnly?"#534AB7":"var(--border2)")+";background:"+(state.openOnly?"#534AB722":"transparent")+";font-weight:"+(state.openOnly?600:400)},["Alleen open-weight"]);
+    bo.onclick=function(){state.openOnly=!state.openOnly;render();};ow.appendChild(bo);
+    [["throughput","t/s"],["ttft","TTFT"]].forEach(function(p){
+      var on=state.metric===p[0];
+      var btn=h("button",{class:"chip"+(on?"":" off"),style:"border-color:"+(on?"var(--ref)":"var(--border2)")+";background:"+(on?"#D85A3022":"transparent")+";font-weight:"+(on?600:400)},["x: "+p[1]]);
+      btn.onclick=function(){state.metric=p[0];render();};
+      ow.appendChild(btn);
+    });
+    pO.appendChild(ow);r1.appendChild(pO);
+
+    // price slider
+    var pP=h("div",{class:"panel"});
+    pP.appendChild(h("div",{class:"lbl",html:"Max blended prijs: <strong>$"+state.maxBl.toFixed(2)+"/1M</strong>"}));
+    var sl=h("input",{type:"range",min:"0.1",max:"8",step:"0.05",value:String(state.maxBl)});
+    sl.oninput=function(){state.maxBl=parseFloat(sl.value);render();};
+    pP.appendChild(sl);
+    pP.appendChild(h("div",{style:"font-size:11px;color:var(--text3);margin-top:2px"},["gpt-5-mini referentie = $"+REF.blended.toFixed(2)+" blended"]));
+    r2.appendChild(pP);
+
+    // sort
+    var pS=h("div",{class:"panel"},[h("div",{class:"lbl"},["Sorteren"])]);
+    var sel=h("select");
+    [["blended","Goedkoopst eerst"],["speed","Snelst (throughput)"],["ttft","Laagste TTFT"],["tier","Tier (A\u2192C)"],["name","Naam"]].forEach(function(p){
+      var o=h("option",{value:p[0]},[p[1]]);if(state.sort===p[0])o.selected=true;sel.appendChild(o);
+    });
+    sel.onchange=function(){state.sort=sel.value;render();};
+    pS.appendChild(sel);r2.appendChild(pS);
+
+    // vendor / maker row
+    var rv=document.getElementById("rowVendor");rv.innerHTML="";
+    rv.appendChild(h("div",{class:"lbl"},["Vendor / modelmaker"]));
+    var vw=h("div",{style:"display:flex;flex-wrap:wrap;gap:6px;align-items:center"});
+    var allOn=MAKERS.every(function(k){return state.makers[k];});
+    var ball=h("button",{class:"chip"+(allOn?"":" off"),style:"font-weight:600;border-color:var(--navy)"},[allOn?"Wis alle":"Selecteer alle"]);
+    ball.onclick=function(){var v=!allOn;MAKERS.forEach(function(k){state.makers[k]=v;});render();};
+    vw.appendChild(ball);
+    MAKERS.forEach(function(k){
+      var on=state.makers[k],n=M.filter(function(m){return m.maker===k;}).length;
+      var btn=h("button",{class:"chip"+(on?"":" off"),style:"border-color:"+(on?"var(--navy)":"var(--border2)")+";background:"+(on?"rgba(31,58,95,.12)":"transparent")+";font-weight:"+(on?600:400)},[k+" ("+n+")"]);
+      btn.onclick=function(){state.makers[k]=!state.makers[k];render();};
+      vw.appendChild(btn);
+    });
+    rv.appendChild(vw);
+
+    // search row
+    var rsr=document.getElementById("rowSearch");rsr.innerHTML="";
+    rsr.appendChild(h("div",{class:"lbl"},["Zoek op modelnaam"]));
+    var box=h("div",{style:"display:flex;gap:8px;align-items:center"});
+    var inp=h("input",{type:"text",placeholder:"bv. mistral, gpt-oss, llama, flash\u2026",value:state.search,
+      style:"flex:1;padding:7px 10px;border-radius:8px;border:0.5px solid var(--border2);font-size:13px;background:var(--bg);color:var(--text)"});
+    inp.oninput=function(){state.search=inp.value;renderResults();
+      var c=document.getElementById("__clrbtn");
+      if(state.search && !c){ /* clear button appears on next full render */ }
+    };
+    inp.onchange=function(){render();};  // full rebuild (incl. clear button) on blur/enter
+    box.appendChild(inp);
+    if(state.search){
+      var clr=h("button",{class:"chip",id:"__clrbtn"},["wissen"]);
+      clr.onclick=function(){state.search="";render();};
+      box.appendChild(clr);
+    }
+    rsr.appendChild(box);
+  }
+
+  function visible(){
+    var q=state.search.trim().toLowerCase();
+    return M.filter(function(m){
+      if(!state.tiers[m.tier])return false;
+      if(!state.modes[m.mode])return false;
+      if(!state.makers[m.maker])return false;
+      if(q && m.name.toLowerCase().indexOf(q)===-1 && (m.maker||"").toLowerCase().indexOf(q)===-1)return false;
+      if(state.openOnly&&m.open==="proprietary")return false;
+      if(bl(m)>state.maxBl)return false;
+      return true;
+    });
+  }
+  function sortRows(rows){
+    var to={A:0,B:1,C:2};
+    return rows.slice().sort(function(a,b){
+      if(state.sort==="blended")return bl(a)-bl(b);
+      if(state.sort==="speed")return b.speed-a.speed;
+      if(state.sort==="ttft")return a.ttft-b.ttft;
+      if(state.sort==="tier")return to[a.tier]-to[b.tier]||bl(a)-bl(b);
+      return a.name.localeCompare(b.name);
+    });
+  }
+
+  function scatter(rows){
+    var W=680,H=360,padL=54,padR=140,padT=16,padB=44,pw=W-padL-padR,ph=H-padT-padB;
+    var svg=document.getElementById("scatter");while(svg.firstChild)svg.removeChild(svg.firstChild);
+    var axis=getComputedStyle(document.body).getPropertyValue("--text2")||"#888";
+    var border=getComputedStyle(document.body).getPropertyValue("--border2")||"#ccc";
+    var pts=rows.filter(function(m){return m.tier!=="C";});
+    var sp=function(m){return state.metric==="throughput"?m.speed:m.ttft;};
+    var maxS=state.metric==="throughput"?500:1.9;
+    pts.forEach(function(m){if(sp(m)>maxS)maxS=sp(m);});
+    var maxC=0.5;pts.forEach(function(m){if(bl(m)>maxC)maxC=bl(m);});maxC=Math.max(maxC,REF.blended);
+    var xOf=function(m){var v=sp(m);var f=state.metric==="throughput"?v/maxS:1-v/maxS;return padL+f*pw;};
+    var yOf=function(m){return padT+(bl(m)/maxC)*ph;};
+
+    svg.appendChild(svgEl("line",{x1:padL,y1:padT,x2:padL,y2:padT+ph,stroke:border,"stroke-width":1}));
+    svg.appendChild(svgEl("line",{x1:padL,y1:padT+ph,x2:padL+pw,y2:padT+ph,stroke:border,"stroke-width":1}));
+    var refY=padT+(REF.blended/maxC)*ph;
+    svg.appendChild(svgEl("line",{x1:padL,y1:refY,x2:padL+pw,y2:refY,stroke:"#D85A30","stroke-width":1.5,"stroke-dasharray":"5 4"}));
+    svg.appendChild(svgEl("text",{x:padL+pw+6,y:refY+3,"font-size":10,fill:"#D85A30"},["5-mini prijs"]));
+    svg.appendChild(svgEl("text",{x:padL,y:H-8,"font-size":11,fill:axis},[state.metric==="throughput"?"\u2190 langzamer    sneller (tokens/sec) \u2192":"\u2190 trage start    snelle start (lage TTFT) \u2192"]));
+    svg.appendChild(svgEl("text",{x:-(padT+ph/2),y:14,"font-size":11,fill:axis,transform:"rotate(-90)","text-anchor":"middle"},["\u2190 duur    goedkoop ($/1M blended) \u2192"]));
+
+    if(pts.length===0){
+      svg.appendChild(svgEl("text",{x:W/2,y:H/2,"font-size":13,fill:axis,"text-anchor":"middle"},["Geen bruikbare routes binnen deze filters"]));
+      return;
+    }
+    pts.forEach(function(m){
+      var x=xOf(m),y=yOf(m),isRef=m.name.indexOf("referentie")>-1,col=TIER[m.tier].hex;
+      svg.appendChild(svgEl("circle",{cx:x,cy:y,r:isRef?7:6,fill:isRef?"none":col+"cc",stroke:col,"stroke-width":isRef?2:1,"stroke-dasharray":isRef?"3 2":""}));
+      svg.appendChild(svgEl("text",{x:x+9,y:y+3,"font-size":9.5,fill:axis},[m.name.replace(" (referentie)","")]));
+    });
+  }
+
+  function pill(txt,bg,fg){return h("span",{class:"pill",style:"background:"+bg+";color:"+fg},[txt]);}
+
+  function table(rows){
+    var tb=document.getElementById("tbody");tb.innerHTML="";
+    rows.forEach(function(m){
+      var isRef=m.name.indexOf("referentie")>-1,faster=m.speed>REF.speed,cheaper=bl(m)<REF.blended;
+      var tr=h("tr",{style:isRef?"background:var(--nonr-bg)":(m.tier==="C"?"background:var(--c-bg)":"")});
+      var c1=h("td",{style:"font-weight:500"});
+      c1.appendChild(t(m.name.replace(" (referentie)","")));
+      if(m.latest)c1.appendChild(h("span",{class:"badge"},["nieuw"]));
+      c1.appendChild(h("div",{class:"note"},[m.maker+" \u00b7 "+m.note]));
+      tr.appendChild(c1);
+      tr.appendChild(h("td",{style:"font-size:11.5px"},[m.route]));
+      tr.appendChild(h("td",{},[pill(m.tier,TIER[m.tier].bg,TIER[m.tier].fg)]));
+      tr.appendChild(h("td",{},[pill(MODE[m.mode].label,MODE[m.mode].bg,MODE[m.mode].fg)]));
+      tr.appendChild(h("td",{style:"text-align:right;color:"+(cheaper?"var(--a-fg)":"var(--text)")},["$"+m.inP.toFixed(2)]));
+      tr.appendChild(h("td",{style:"text-align:right"},["$"+m.outP.toFixed(2)]));
+      tr.appendChild(h("td",{style:"text-align:right;font-weight:"+(faster?600:400)+";color:"+(faster?"var(--a-fg)":"var(--text)")},[String(m.speed)]));
+      tr.appendChild(h("td",{style:"text-align:right"},[m.ttft.toFixed(2)+"s"]));
+      tb.appendChild(tr);
+    });
+  }
+
+  function rejected(){
+    var box=document.getElementById("rejected");box.innerHTML="";
+    if(state.tiers.C)return;
+    var cr=M.filter(function(m){return m.tier==="C" && state.makers[m.maker];});
+    if(cr.length===0)return;
+    var w=h("div",{class:"rejbox"});
+    w.appendChild(h("div",{class:"rejttl"},["Afgevallen voor gevoelige maildata ("+cr.length+") \u2014 VS-entiteit of geen harde EU-routing"]));
+    cr.forEach(function(m){
+      var row=h("div",{class:"rejrow"});
+      row.appendChild(h("span",{style:"font-weight:500;color:var(--text)"},[m.name+" "]));
+      row.appendChild(t("\u2014 "+m.route+" \u00b7 "+m.note));
+      w.appendChild(row);
+    });
+    box.appendChild(w);
+  }
+
+  function renderResults(){
+    var rows=sortRows(visible());
+    scatter(rows);table(rows);rejected();
+    var usable=rows.filter(function(m){return m.tier!=="C";}).length;
+    document.getElementById("caption").textContent=rows.length+" routes getoond ("+usable+" bruikbaar voor gevoelige maildata). Groene t/s = sneller dan gpt-5-mini, groene prijs = goedkoper. Tier C staat los onderaan tenzij aangevinkt. Blended = (in+uit)/2; prijzen zijn een mix van USD en EUR zoals door vendors opgegeven. TTFT/t/s zijn mediaan-benchmarks en vari\u00ebren met load, regio en promptlengte.";
+  }
+  function render(){
+    controls();
+    renderResults();
+  }
+  render();
+})();
+</script>
+</body>
+</html>

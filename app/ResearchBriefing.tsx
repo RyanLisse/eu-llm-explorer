@@ -29,7 +29,7 @@ function useReveal<T extends HTMLElement>(threshold = 0.25) {
           observer.disconnect();
         }
       },
-      { threshold, root: el.closest(".page-main") },
+      { threshold, root: el.closest(".main-tab-panel") },
     );
     observer.observe(el);
     return () => observer.disconnect();
