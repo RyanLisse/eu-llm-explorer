@@ -31,10 +31,12 @@ const INITIAL_FILTERS = {
 };
 
 export async function POST(req: Request) {
-  const { messages, currentFilters } = (await req.json()) as {
+  const body = (await req.json()) as {
     messages: UIMessage[];
-    currentFilters: typeof INITIAL_FILTERS;
+    currentFilters?: typeof INITIAL_FILTERS;
   };
+  const { messages } = body;
+  const currentFilters = body.currentFilters ?? INITIAL_FILTERS;
 
   // 1. Format current filter state for system prompt
   const tiersStr = Object.entries(currentFilters.tiers ?? {})

@@ -13,6 +13,10 @@ const nextConfig: NextConfig = {
   },
   // effect ships modern ESM; let Next transpile it for the server bundle.
   transpilePackages: ["effect", "@effect-atom/atom-react", "ai", "@ai-sdk/react"],
+  // Include db/schema.sql in the /api/chat serverless function bundle.
+  outputFileTracingIncludes: {
+    "/api/chat": ["./db/schema.sql"],
+  },
 };
 
 export default nextConfig;
