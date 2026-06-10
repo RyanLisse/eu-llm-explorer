@@ -1,0 +1,21 @@
+node_modules
+.next
+out
+*.tsbuildinfo
+.DS_Store
+.env*
+!.env.example
+
+# Agent/tool state dirs
+.omc/
+.omx/
+.agents/
+.codex/
+.cursor/
+.droid/
+.gemini/
+.claude/
+.opencode/
+.github/copilot/
+.expect/
+.tmp-*
