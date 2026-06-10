@@ -14,7 +14,7 @@ const config = () => {
   // @libsql/client/web uses fetch and only accepts http(s):// URLs.
   // The native client auto-translates libsql:// → wss://, but /web does not.
   return {
-    url: url.replace(/^libsql:\/\//, "https://"),
+    url: url.trim().replace(/^libsql:\/\//, "https://"),
     authToken: process.env.TURSO_AUTH_TOKEN,
   };
 };
