@@ -5,6 +5,7 @@ import type { ExplorerData } from "@/services";
 import type { ChainView } from "@/domain";
 import { Explorer } from "./Explorer";
 import { Chat } from "./Chat";
+import { ResearchBriefing } from "./ResearchBriefing";
 import { MessageSquare } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
@@ -89,6 +90,8 @@ export function PageShell({ data }: { readonly data: ExplorerData }) {
                 </li>
               </ul>
             </details>
+
+            <ResearchBriefing />
 
             <details className="chain-disclosure">
               <summary>
