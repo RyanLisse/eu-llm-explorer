@@ -5,7 +5,8 @@ import { fileURLToPath } from "node:url";
 const repoRoot = dirname(fileURLToPath(import.meta.url));
 
 const nextConfig: NextConfig = {
-  output: "standalone",
+  // standalone only for self-hosted Docker; Vercel handles optimization natively
+  ...(process.env.STANDALONE === "true" ? { output: "standalone" } : {}),
   reactStrictMode: true,
   turbopack: {
     root: repoRoot,
