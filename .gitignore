@@ -19,3 +19,5 @@ out
 .github/copilot/
 .expect/
 .tmp-*
+.vercel
+.env*.local
