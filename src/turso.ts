@@ -11,8 +11,10 @@ import type {
 const config = () => {
   const url = process.env.TURSO_DATABASE_URL;
   if (!url) return null;
+  // @libsql/client/web uses fetch and only accepts http(s):// URLs.
+  // The native client auto-translates libsql:// → wss://, but /web does not.
   return {
-    url,
+    url: url.replace(/^libsql:\/\//, "https://"),
     authToken: process.env.TURSO_AUTH_TOKEN,
   };
 };
