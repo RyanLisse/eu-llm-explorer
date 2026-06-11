@@ -12,40 +12,40 @@
   --carbon: #000000;
   --cloud: #e8f0f8;
 
-  /* ── Light surfaces (Blinqx day family — verified vs accountancy.blinqx.tech) ── */
-  --bg:        #f4f7f9;
-  --bg-soft:   #edf2f7;
+  /* ── Light surfaces (Blinqx day family — canonical from eval-bench) ─────── */
+  --bg:        #f4f0e7;
+  --bg-soft:   #f8f4ea;
   --bg-card:   #ffffff;
-  --bg-raised: #cad5e3;
+  --bg-raised: #f3efe5;
   --bg-input:  #ffffff;
   --body-bg:
-    radial-gradient(circle at 82% 7%, rgba(255,205,0,.10), transparent 24rem),
-    radial-gradient(circle at 20% 22%, rgba(4,182,152,.06), transparent 24rem),
-    linear-gradient(135deg, #f4f7f9 0%, #edf2f7 56%, #cad5e3 100%);
+    radial-gradient(circle at 82% 7%, rgba(255,205,0,.36), transparent 23rem),
+    radial-gradient(circle at 20% 22%, rgba(4,182,152,.14), transparent 24rem),
+    linear-gradient(135deg, #fbf7ec 0%, #f3efe5 48%, #fffaf0 100%);
 
-  /* ── Core palette (Blinqx brand) ──────────────────── */
-  --core:      #edf2f7;
-  --sky:       #3a8ca6;
-  --lavender:  #475569;
-  --growth:    #029a80;
-  --coral:     #b93c3c;
+  /* ── Core palette (Blinqx brand — canonical from eval-bench) ─────────── */
+  --core:      #f8f4ea;
+  --sky:       #6da6b9;
+  --lavender:  #cad5e3;
+  --growth:    #04b698;
+  --coral:     #d15858;
 
   /* ── Ink / text ───────────────────────────────────── */
-  --ink:       #0f172a;
-  --ink-soft:  #334155;
-  --ink-faint: #64748b;
+  --ink:       #0f1420;
+  --ink-soft:  #222936;
+  --ink-faint: #667085;
 
   /* ── Borders ──────────────────────────────────────── */
-  --line:      rgba(15,23,42,0.08);
+  --line:      rgba(15,20,32,.12);
   --line-accent: rgba(255,205,0,0.45);
 
   /* ── Semantic ─────────────────────────────────────── */
-  --frost:     #f1f5f9;
-  --glow:      rgba(255,205,0,0.15);
-  --ray:       #ffcd00;
-  --sprout:    #029a80;
-  --mint:      rgba(4,182,152,0.08);
-  --breeze:    #3a8ca6;
+  --frost:     #e4eaf1;
+  --glow:      #fff0b3;
+  --ray:       #ffdc4d;
+  --sprout:    #4fccb7;
+  --mint:      #b4e9e0;
+  --breeze:    #99c1ce;
 
   /* ── Tier encoding ────────────────────────────────── */
   --tier-a: var(--growth);
@@ -53,8 +53,8 @@
   --tier-c: var(--coral);
 
   /* ── Custom UI extensions ─────────────────────────── */
-  --topbar-bg: radial-gradient(circle at 0% 0%, rgba(255,205,0,0.14), transparent 22rem), linear-gradient(180deg, #edf2f7, #f8fafc);
-  --chat-bg: #f8fafc;
+  --topbar-bg: radial-gradient(circle at 0% 0%, rgba(255,205,0,0.22), transparent 22rem), linear-gradient(180deg, #f3efe5, #f4f0e7);
+  --chat-bg: #f4f0e7;
   --chat-input-bg: #ffffff;
 
   /* ── Fonts ────────────────────────────────────────── */
@@ -63,37 +63,37 @@
   --font-data: var(--font-mono), "IBM Plex Mono", monospace;
 
   /* ── shadcn/tailwind tokens (light) ───────────────── */
-  --background: #f8fafc;
-  --foreground: #0f172a;
+  --background: #f4f0e7;
+  --foreground: #0f1420;
   --card: #ffffff;
-  --card-foreground: #0f172a;
+  --card-foreground: #0f1420;
   --popover: #ffffff;
-  --popover-foreground: #0f172a;
+  --popover-foreground: #0f1420;
   --primary: #ffcd00;
   --primary-foreground: #000000;
-  --secondary: #edf2f7;
-  --secondary-foreground: #0f172a;
-  --muted: #edf2f7;
-  --muted-foreground: #64748b;
-  --accent: rgba(255,205,0,0.15);
+  --secondary: #f8f4ea;
+  --secondary-foreground: #0f1420;
+  --muted: #f8f4ea;
+  --muted-foreground: #667085;
+  --accent: rgba(255,205,0,0.20);
   --accent-foreground: #000000;
-  --destructive: #b93c3c;
-  --border: rgba(15,23,42,0.08);
-  --input: rgba(15,23,42,0.08);
+  --destructive: #d15858;
+  --border: rgba(15,20,32,.12);
+  --input: rgba(15,20,32,.12);
   --ring: #ffcd00;
   --chart-1: #ffcd00;
-  --chart-2: #029a80;
-  --chart-3: #3a8ca6;
-  --chart-4: #334155;
-  --chart-5: #64748b;
+  --chart-2: #04b698;
+  --chart-3: #6da6b9;
+  --chart-4: #222936;
+  --chart-5: #667085;
   --radius: 0.5rem;
-  --sidebar: #f1f5f9;
-  --sidebar-foreground: #0f172a;
+  --sidebar: #f3efe5;
+  --sidebar-foreground: #0f1420;
   --sidebar-primary: #ffcd00;
   --sidebar-primary-foreground: #000000;
-  --sidebar-accent: #e2e8f0;
-  --sidebar-accent-foreground: #0f172a;
-  --sidebar-border: rgba(15,23,42,0.08);
+  --sidebar-accent: #f8f4ea;
+  --sidebar-accent-foreground: #0f1420;
+  --sidebar-border: rgba(15,20,32,.12);
   --sidebar-ring: #ffcd00;
 }
 
