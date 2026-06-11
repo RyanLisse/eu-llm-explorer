@@ -75,12 +75,11 @@ Het licht/donker-thema wordt bepaald door de `dark` class op `<html>`. De initia
 
 ## 5. Interface & Layout Architectuur
 
-De applicatie is gebouwd als een responsieve **Split-Pane Layout** (`app/PageShell.tsx`):
+De applicatie is gebouwd als een responsieve **Split-Pane Layout** (`app/PageShell.tsx`). Het doel van de app: **EU-platformen vergelijken met de huidige Azure AI Foundry-baseline** — klik op een vendor en zie direct de beschikbare modellen, prijzen, snelheid en het soevereiniteitsoordeel.
 
-1. **Linker Paneel (Explorer & Analytics)** — tabs: Explorer, Coverage, Chains, Research
-   * **Explorer tab**: declaratieve heading die meebeweegt met de actieve filters ("EU-sovereign routes lead on reliability — N routes score X+"), live insight-summary regel, eerste-bezoek welkomstbanner (dismissible, `localStorage.seenIntro`).
-   * **Coverage tab**: provider coverage overzicht.
-   * **Chains tab**: aanbevolen failover-ketens per workload.
+1. **Linker Paneel** — tabs: Compare (default), Advanced, Research
+   * **Compare tab** (`app/VendorCompare.tsx`): vendor-picker met één kaart per platform (Azure AI Foundry gepind als "current"), een soevereiniteitsoordeel (Tier A = volledig EU-soeverein / Tier B = EU-residency met CLOUD Act-exposure), een head-to-head vergelijking versus Azure Foundry (modellen, goedkoopste, snelste, betrouwbaarheid) en de volledige EU-modelcatalogus van het gekozen platform met prijs/snelheid uit de benchmark-set. Vendor-keuze staat in de URL (`?vendor=`).
+   * **Advanced tab** (`app/Explorer.tsx`): de oorspronkelijke filter-explorer — declaratieve heading, insight-summary, presets, scatter-chart en route-tabel.
    * **Research tab**: ResearchBriefing component.
 
 2. **Rechter Paneel (Agent-Native Chat)** — inklapbaar chatpaneel

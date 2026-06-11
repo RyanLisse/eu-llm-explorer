@@ -29,6 +29,7 @@ src/atoms.ts      effect-atom filter state (keep-alive)
 app/page.tsx      Dynamic server component: runs the Effect pipeline, renders analysis + chains
 app/Explorer.tsx  Client component: filters, scatter plot, table
 app/globals.css   Blinqx palette + HippoLine (Metropolis/Arial) typography
+docs/design.md    Blinqx/HippoLine design tokens and interface architecture
 ```
 
 The runtime data layer is Turso-first: when `TURSO_DATABASE_URL` is configured, routes and provider coverage are loaded from Turso/libSQL, decoded once (`Schema.decodeUnknown`), scored, and routed through composed `Effect.Service` layers. If Turso env vars are absent or the DB is empty, the app falls back to the curated TypeScript seed data so local builds still work. Filter state uses `@effect-atom/atom-react`.
