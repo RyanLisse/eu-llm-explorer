@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ideation: Interactive Learning Tool — EU LLM Explorer</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+  :root{
+    --bg:#040d1a; --panel:#0a1626; --panel-2:#0e1d31; --line:#1c2e45;
+    --ink:#dce8f4; --muted:#8aa3bd; --accent:#facc15; --accent-text:#fde68a;
+    --green:#4ade80; --green-soft:rgba(74,222,128,.12);
+    --sky:#38bdf8; --sky-soft:rgba(56,189,248,.12);
+    --coral:#fb7185; --coral-soft:rgba(251,113,133,.12);
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);
+    font-family:Inter,-apple-system,"Segoe UI",Helvetica,Arial,sans-serif;
+    font-size:15px;line-height:1.65}
+  code{font-family:"JetBrains Mono",ui-monospace,Menlo,monospace;font-size:.88em;
+    background:var(--panel-2);padding:.1em .35em;border-radius:4px;color:var(--accent-text)}
+  .container{max-width:900px;margin-inline:auto;padding:48px 24px 24px}
+  p,li{max-width:72ch}
+  h1{font-size:1.8rem;line-height:1.25;margin:.4em 0 .2em}
+  h2{font-size:1.3rem;margin-top:2.4em;border-bottom:1px solid var(--line);padding-bottom:.35em}
+  h3{font-size:1.05rem;margin-top:0}
+  .eyebrow{font-size:.72rem;letter-spacing:.14em;text-transform:uppercase;color:var(--accent);font-weight:600}
+  .meta{display:flex;flex-wrap:wrap;gap:8px;margin:14px 0 6px}
+  .chip{display:inline-block;padding:3px 12px;border-radius:999px;border:1px solid var(--line);
+    background:var(--panel);font-size:.78rem;color:var(--muted)}
+  .chip b{color:var(--ink);font-weight:600}
+  section{margin-bottom:8px}
+  ul.axes{list-style:none;padding:0}
+  ul.axes li{padding:8px 14px;margin:6px 0;background:var(--panel);border:1px solid var(--line);border-radius:8px}
+  ul.axes li span{color:var(--muted)}
+  .jump{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px 18px;margin:18px 0}
+  .jump ol{margin:6px 0 0;padding-left:1.4em}
+  .jump a{color:var(--sky);text-decoration:none}
+  .jump a:hover{text-decoration:underline}
+  article.idea{background:var(--panel);border:1px solid var(--line);border-radius:12px;
+    padding:22px 24px;margin:18px 0}
+  .idea-head{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;margin-bottom:6px}
+  .idea-id{font-family:"JetBrains Mono",monospace;font-weight:600;color:var(--accent);font-size:1rem}
+  .idea-chips{display:flex;gap:8px;flex-wrap:wrap;margin:8px 0 14px}
+  .pill{display:inline-block;padding:2px 10px;border-radius:999px;font-size:.74rem;font-weight:500;border:1px solid var(--line)}
+  .pill.axis{background:var(--sky-soft);color:var(--sky);border-color:transparent}
+  .pill.conf{background:var(--green-soft);color:var(--green);border-color:transparent}
+  .pill.cx{background:var(--coral-soft);color:var(--coral);border-color:transparent}
+  dl.fields{margin:0}
+  dl.fields dt{font-size:.72rem;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);
+    font-weight:600;margin-top:12px}
+  dl.fields dd{margin:2px 0 0}
+  table{border-collapse:collapse;width:100%;margin:16px 0;font-size:.88rem}
+  th,td{border:1px solid var(--line);padding:8px 12px;text-align:left;vertical-align:top}
+  th{background:var(--panel-2);font-size:.74rem;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+  td{background:var(--panel)}
+  .duo{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin:16px 0}
+  @media(max-width:640px){.duo{grid-template-columns:1fr}}
+  .duo .card{border:1px solid var(--line);border-radius:10px;padding:14px 16px;background:var(--panel-2)}
+  .duo .card .eyebrow{display:block;margin-bottom:6px}
+  .duo .card.before .eyebrow{color:var(--coral)}
+  .duo .card.after .eyebrow{color:var(--green)}
+  figure{margin:18px 0}
+  figcaption{font-size:.8rem;color:var(--muted);margin-top:6px}
+  footer.composition-signal{margin-top:48px;padding-top:16px;border-top:1px solid var(--line);
+    font-size:.78rem;color:var(--muted)}
+</style>
+</head>
+<body>
+<div class="container">
+
+<header>
+  <span class="eyebrow">Ideation · Discovery Document</span>
+  <h1>Interactive Learning Tool — EU LLM Explorer</h1>
+  <div class="meta">
+    <span class="chip">date <b>2026-06-11</b></span>
+    <span class="chip">topic <b>interactive-learning-tool</b></span>
+    <span class="chip">mode <b>repo-grounded</b></span>
+  </div>
+  <p style="color:var(--muted)">Focus: make this an interactive learning tool, with light/dark mode and easy UX and UI, remove all redundant files, and create an amazing experience.</p>
+</header>
+
+<section id="grounding-context">
+  <h2>Grounding Context</h2>
+  <p><strong>Codebase Context.</strong> Next.js (App Router) + Effect-TS + Turso/libSQL comparison tool for EU-sovereign LLM routes. Split-pane UI: <code>app/Explorer.tsx</code> (56&nbsp;KB monolith) with tabs/filters on the left, agent-native chat panel (<code>Chat.tsx</code>, AI SDK v5 with a <code>set_filters</code> tool mirroring <code>FilterState</code> in <code>src/atoms.ts</code>) on the right. Dark-only Blinqx/HippoLine theme: all colors are CSS variables under <code>:root</code> in <code>app/globals.css</code> (56&nbsp;KB) — token indirection exists but no light token set. Tier semantics are color-encoded (Tier&nbsp;A growth green, Tier&nbsp;B sky, Tier&nbsp;C coral). Conventions to preserve: <code>page.tsx</code> is a pure server data loader, <code>PageShell.tsx</code> owns client layout state, module-level keep-alive atoms, no TanStack Query. Hygiene findings: four <code>.tmp-*.png</code> screenshots (~1.2&nbsp;MB) at repo root, duplicate <code>"(1)"</code> files in <code>docs/research/</code>, and <code>ResearchBriefing.tsx</code> overlapping the chat/briefing content.</p>
+  <p><strong>Past learnings.</strong> No <code>docs/solutions/</code> exists. <code>docs/design.md</code> records the dark palette as a deliberate brand decision (aligned to eval-bench's official Blinqx palette, commit b21a323); grain overlay and glassmorphism are tuned for dark surfaces. The chat plan doc records that any filter-field rename breaks the chat tool contract.</p>
+  <p><strong>External context.</strong> The Pudding's story structures (stacked single-chart, scrollytelling, step-progression; "sledgehammer stat" first). NYT finding: ~85% of readers ignore tooltips — surface insights inline, never gate them behind interaction. Our World in Data's declarative chart titles (full-sentence conclusions). Distill.pub's reactive-diagram pattern. Khan/Brilliant evidence: prediction prompts beat scored quizzes (quizzes cause drop-off). <code>next-themes</code> is the standard no-flash dark-mode pattern; Driver.js the permissive-license tour library; "empty state as first lesson" is the 2025 consensus for data tools.</p>
+</section>
+
+<section id="topic-axes">
+  <h2>Topic Axes</h2>
+  <ul class="axes">
+    <li><b>Guided learning layer</b> <span>— narrative chapters, tours, prediction prompts, takeaway scaffolding</span></li>
+    <li><b>Theming</b> <span>— light/dark token sets, toggle UX, dark-only visual effects</span></li>
+    <li><b>Explorer UX</b> <span>— filters, defaults, empty states, plain-language insight surfacing</span></li>
+    <li><b>Chat as teacher</b> <span>— the agent narrating and driving the UI as a teaching mechanism</span></li>
+    <li><b>Codebase hygiene</b> <span>— redundant files, component decomposition, CSS structure</span></li>
+  </ul>
+</section>
+
+<section id="ranked-ideas">
+  <h2>Ranked Ideas</h2>
+  <div class="jump">
+    <span class="eyebrow">Jump to</span>
+    <ol>
+      <li><a href="#i1">Learn Mode: a chaptered data story that drives the real explorer</a></li>
+      <li><a href="#i2">Light/dark theme on the existing token layer</a></li>
+      <li><a href="#i3">Insight-first UX: declarative titles, takeaway cards, plain-language summaries</a></li>
+      <li><a href="#i4">Chat as tour guide: starter prompts and agent-driven walkthroughs</a></li>
+      <li><a href="#i5">First-run experience: curated default view plus dismissible micro-tour</a></li>
+      <li><a href="#i6">Prediction prompts: guess before you see</a></li>
+      <li><a href="#i7">Repo cleanup and decomposition</a></li>
+    </ol>
+  </div>
+
+  <article class="idea" id="i1">
+    <div class="idea-head"><span class="idea-id">1.</span><h3>Learn Mode: a chaptered data story that drives the real explorer</h3></div>
+    <div class="idea-chips">
+      <span class="pill axis">axis: guided learning layer</span>
+      <span class="pill conf">confidence 75%</span>
+      <span class="pill cx">complexity High</span>
+    </div>
+    <dl class="fields">
+      <dt>Description</dt>
+      <dd>Add a "Learn" mode alongside the existing explorer: a sequence of named chapters ("Why EU sovereignty matters", "The three tiers", "Reliability vs. residency", "Pick your route"), each pairing 2–3 sentences of narrative with a live explorer state. Advancing a chapter <em>sets the real filters</em> via the existing <code>FilterState</code> atom — the story and the tool are the same surface, not a separate onboarding deck. Chapters are defined as data (a JSON/TS array of {title, prose, filterState}), so new lessons are content, not code. A chapter sidebar shows position and progress.</dd>
+      <dt>Basis</dt>
+      <dd><code>external:</code> The Pudding's step-based progression and Distill.pub's reactive-document pattern; Observable's named-chapter navigation. <code>direct:</code> the keep-alive <code>filterAtom</code> and the chat panel's <code>set_filters</code> tool prove the app already supports programmatic filter state — the story engine reuses the exact mechanism the agent uses.</dd>
+      <dt>Rationale</dt>
+      <dd>This is the single move that converts a dashboard into a learning tool rather than decorating it with tips. Because chapters are data driving existing state, it compounds: every future insight becomes a one-object lesson, and the chat agent can reuse chapters as tours.</dd>
+      <dt>Downsides</dt>
+      <dd>Largest build on the list; needs editorial writing, not just code. Chapter definitions must stay in sync with <code>FilterState</code> shape (same coupling the chat tool already has).</dd>
+    </dl>
+    <figure>
+      <svg viewBox="0 0 720 200" width="100%" role="img" aria-label="Learn Mode diagram: chapter data drives the shared filter state, which both the explorer and chat already consume">
+        <rect x="20" y="60" width="190" height="80" rx="10" fill="#0e1d31" stroke="#38bdf8"/>
+        <text x="115" y="92" fill="#dce8f4" font-size="13" text-anchor="middle" font-weight="600">Chapters (data)</text>
+        <text x="115" y="112" fill="#8aa3bd" font-size="11" text-anchor="middle">title · prose · filterState</text>
+        <rect x="290" y="60" width="160" height="80" rx="10" fill="#0e1d31" stroke="#facc15"/>
+        <text x="370" y="92" fill="#dce8f4" font-size="13" text-anchor="middle" font-weight="600">filterAtom</text>
+        <text x="370" y="112" fill="#8aa3bd" font-size="11" text-anchor="middle">existing keep-alive state</text>
+        <rect x="530" y="20" width="170" height="60" rx="10" fill="#0e1d31" stroke="#4ade80"/>
+        <text x="615" y="55" fill="#dce8f4" font-size="13" text-anchor="middle" font-weight="600">Explorer view</text>
+        <rect x="530" y="120" width="170" height="60" rx="10" fill="#0e1d31" stroke="#4ade80"/>
+        <text x="615" y="155" fill="#dce8f4" font-size="13" text-anchor="middle" font-weight="600">Chat set_filters</text>
+        <line x1="210" y1="100" x2="282" y2="100" stroke="#8aa3bd" stroke-width="1.5" marker-end="url(#arr)"/>
+        <line x1="450" y1="85" x2="522" y2="55" stroke="#8aa3bd" stroke-width="1.5" marker-end="url(#arr)"/>
+        <line x1="450" y1="115" x2="522" y2="145" stroke="#8aa3bd" stroke-width="1.5" marker-end="url(#arr)"/>
+        <defs><marker id="arr" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 z" fill="#8aa3bd"/></marker></defs>
+      </svg>
+      <figcaption>Illustrative only: chapters are data that set the same filter state the explorer and chat agent already share.</figcaption>
+    </figure>
+  </article>
+
+  <article class="idea" id="i2">
+    <div class="idea-head"><span class="idea-id">2.</span><h3>Light/dark theme on the existing token layer</h3></div>
+    <div class="idea-chips">
+      <span class="pill axis">axis: theming</span>
+      <span class="pill conf">confidence 90%</span>
+      <span class="pill cx">complexity Medium</span>
+    </div>
+    <dl class="fields">
+      <dt>Description</dt>
+      <dd>Add a light token set under <code>[data-theme="light"]</code> in <code>app/globals.css</code>, a toggle in <code>PageShell.tsx</code> (the documented client-state owner), system-preference default, and a blocking inline script in the root layout to prevent flash-of-wrong-theme (the <code>next-themes</code> pattern, with or without the library). Preserve Tier A/B/C semantic colors in both themes, sourcing light values from the Blinqx palette. Audit dark-coupled effects — grain overlay, glassmorphism, glow — and give each a light variant or remove it in light mode.</dd>
+      <dt>Basis</dt>
+      <dd><code>direct:</code> every color already routes through <code>:root</code> CSS variables, so a second token set is the designed-for extension point; <code>docs/design.md</code> confirms the dark palette is deliberate brand, not accident. <code>external:</code> next-themes no-flash pattern is the 2025–26 standard.</dd>
+      <dt>Rationale</dt>
+      <dd>Explicitly requested, high-confidence, and the token indirection means the cost is concentrated in one file plus a small toggle — no component restyling. A light theme is also table stakes for a learning tool used in daylight classrooms/offices.</dd>
+      <dt>Downsides</dt>
+      <dd>Choosing a light palette that keeps tier-color contrast accessible takes real design care; the grain/glass effects need per-theme judgment calls.</dd>
+    </dl>
+  </article>
+
+  <article class="idea" id="i3">
+    <div class="idea-head"><span class="idea-id">3.</span><h3>Insight-first UX: declarative titles, takeaway cards, plain-language summaries</h3></div>
+    <div class="idea-chips">
+      <span class="pill axis">axis: explorer UX</span>
+      <span class="pill conf">confidence 85%</span>
+      <span class="pill cx">complexity Medium</span>
+    </div>
+    <dl class="fields">
+      <dt>Description</dt>
+      <dd>Three coordinated changes: (a) every chart/table heading becomes a full-sentence conclusion that updates with the data; (b) a live plain-language summary line of the current filter result ("3 EU-sovereign routes match · best reliability 94/100"); (c) takeaway cards after key views — one-sentence conclusion plus supporting stat, with the filter state encoded in the URL so any takeaway is linkable and shareable.</dd>
+      <dt>Basis</dt>
+      <dd><code>external:</code> Our World in Data's declarative-title practice; NYT's 85%-ignore-tooltips finding argues for inline text insights over hover reveals; museum interpretive-label layering (caption → paragraph → deep dive). <code>direct:</code> the recommendation/reliability services already compute the conclusions — they're just not verbalized in the UI.</dd>
+      <dt>Rationale</dt>
+      <dd>Cheapest unit of "learning tool" value: non-experts get the conclusion without learning the interface first, experts lose nothing. Pairs multiplicatively with Learn Mode (chapters reuse takeaway cards) and the chat agent (same sentences become its narration).</dd>
+      <dt>Downsides</dt>
+      <dd>Generated sentences must stay honest as filters change — template logic needs care at edge cases (zero results, single result).</dd>
+    </dl>
+    <div class="duo">
+      <div class="card before"><span class="eyebrow">Before — label</span><b>Vendor coverage by tier</b><br><span style="color:var(--muted)">Reader must interpret the chart themselves; insight hidden in tooltips.</span></div>
+      <div class="card after"><span class="eyebrow">After — conclusion</span><b>EU-sovereign routes now match Tier-B reliability — 3 routes score 90+</b><br><span style="color:var(--muted)">Title states the finding; card below cites the stat and links this exact view.</span></div>
+    </div>
+  </article>
+
+  <article class="idea" id="i4">
+    <div class="idea-head"><span class="idea-id">4.</span><h3>Chat as tour guide: starter prompts and agent-driven walkthroughs</h3></div>
+    <div class="idea-chips">
+      <span class="pill axis">axis: chat as teacher</span>
+      <span class="pill conf">confidence 75%</span>
+      <span class="pill cx">complexity Medium</span>
+    </div>
+    <dl class="fields">
+      <dt>Description</dt>
+      <dd>Lean into the existing agent-native chat as the teaching mechanism: curated starter prompts ("Show me the safest EU-only route for coding", "Why is Tier C excluded?") rendered as one-click chips in the chat panel; the agent answers <em>and</em> drives the filters via <code>set_filters</code>, narrating what it changed. Add a "walk me through it" prompt that steps through the same chapter definitions as Learn Mode.</dd>
+      <dt>Basis</dt>
+      <dd><code>direct:</code> the chat plan doc already establishes per-send filter-context injection and the <code>set_filters</code> deep-merge tool — the brainstorm doc itself notes "the agent narrating and driving filters is itself a teaching mechanism." <code>reasoned:</code> watching the UI respond to a question teaches the interface and the data simultaneously, which static tours cannot.</dd>
+      <dt>Rationale</dt>
+      <dd>Highest-leverage reuse in the repo: the hard infrastructure (tool contract, SQL guard, context injection) is built; what's missing is curated entry points that make a first-time user actually experience it.</dd>
+      <dt>Downsides</dt>
+      <dd>LLM answer latency/cost per walkthrough; prompts need curation so the agent's filter moves stay predictable.</dd>
+    </dl>
+  </article>
+
+  <article class="idea" id="i5">
+    <div class="idea-head"><span class="idea-id">5.</span><h3>First-run experience: curated default view plus dismissible micro-tour</h3></div>
+    <div class="idea-chips">
+      <span class="pill axis">axis: explorer UX</span>
+      <span class="pill conf">confidence 80%</span>
+      <span class="pill cx">complexity Low</span>
+    </div>
+    <dl class="fields">
+      <dt>Description</dt>
+      <dd>Treat the first load as the first lesson: open on a pre-filtered, opinionated view (e.g., "EU-sovereign routes ranked by reliability") with a one-line callout ("This is the Tier-A shortlist — try widening to Tier B"), plus an optional 3–4 step Driver.js tour anchoring on the filter sidebar, the scatter/table, and the chat panel. Dismiss persists; never blocks.</dd>
+      <dt>Basis</dt>
+      <dd><code>external:</code> "empty state as first lesson" consensus (Eleken/Raw Studio); Driver.js as the permissive-license tour choice. <code>reasoned:</code> the app currently opens as a filter wall — the highest-bounce moment for non-experts is the first ten seconds.</dd>
+      <dt>Rationale</dt>
+      <dd>Smallest change with the largest effect on "easy UX" for new users; also the natural front door into Learn Mode and the chat starter prompts.</dd>
+      <dt>Downsides</dt>
+      <dd>Tour anchors couple to DOM structure — keep steps few and resilient.</dd>
+    </dl>
+  </article>
+
+  <article class="idea" id="i6">
+    <div class="idea-head"><span class="idea-id">6.</span><h3>Prediction prompts: guess before you see</h3></div>
+    <div class="idea-chips">
+      <span class="pill axis">axis: guided learning layer</span>
+      <span class="pill conf">confidence 70%</span>
+      <span class="pill cx">complexity Low–Medium</span>
+    </div>
+    <dl class="fields">
+      <dt>Description</dt>
+      <dd>At chapter transitions (and optionally before headline charts), pose a single-click prediction: "Before we look — do you think EU-sovereign routes are more or less reliable than US hyperscaler routes?" Lock the pick, reveal the actual data, no right/wrong scoring — just the reveal and "X% guessed this." A small React state machine, no library.</dd>
+      <dt>Basis</dt>
+      <dd><code>external:</code> retrieval-practice/testing-effect literature via Khan Academy and Brilliant: prediction prompts drive engagement where scored multiple-choice causes drop-off; single-click input avoids the friction failure mode.</dd>
+      <dt>Rationale</dt>
+      <dd>The one mechanic that makes reading <em>active</em> — it converts "scrolling past a chart" into a small commitment the reveal then pays off. Distinct from, and composable with, Learn Mode chapters.</dd>
+      <dt>Downsides</dt>
+      <dd>Needs restraint — more than a handful per session becomes a gimmick; "X% guessed" requires either storage or honest omission at first.</dd>
+    </dl>
+  </article>
+
+  <article class="idea" id="i7">
+    <div class="idea-head"><span class="idea-id">7.</span><h3>Repo cleanup and decomposition</h3></div>
+    <div class="idea-chips">
+      <span class="pill axis">axis: codebase hygiene</span>
+      <span class="pill conf">confidence 95%</span>
+      <span class="pill cx">complexity Low–Medium</span>
+    </div>
+    <dl class="fields">
+      <dt>Description</dt>
+      <dd>Delete the four root-level <code>.tmp-*.png</code> screenshots (~1.2&nbsp;MB); consolidate the duplicate <code>"(1)"</code> files in <code>docs/research/</code>; fold <code>ResearchBriefing.tsx</code> into the Learn Mode/briefing flow or remove it; split <code>Explorer.tsx</code> (56&nbsp;KB) into scatter, table, filter-sidebar, and tab components; extract design tokens from the 56&nbsp;KB <code>globals.css</code> into a dedicated token block/file. Preserve the documented conventions (server loader, client shell, keep-alive atoms).</dd>
+      <dt>Basis</dt>
+      <dd><code>direct:</code> all six findings come from the codebase scan — file sizes, the tmp screenshots, and the duplicate docs are observable in the tree today.</dd>
+      <dt>Rationale</dt>
+      <dd>Explicitly requested ("remove all redundant files"), and the decomposition is the enabler for everything above: Learn Mode, theming, and insight cards all touch Explorer.tsx — splitting it first makes every other idea cheaper and safer. Tactical scope acknowledged; meeting-test waived per the stated focus.</dd>
+      <dt>Downsides</dt>
+      <dd>Decomposition of a 56&nbsp;KB component risks regressions without visual checks; do it before, not during, feature work.</dd>
+    </dl>
+  </article>
+</section>
+
+<section id="rejection-summary">
+  <h2>Rejection Summary</h2>
+  <table>
+    <thead><tr><th>#</th><th>Idea</th><th>Reason Rejected</th></tr></thead>
+    <tbody>
+      <tr><td>1</td><td>Gamified unlock of advanced filters</td><td>Gating capability punishes expert users; contradicts the surface-insights-inline evidence.</td></tr>
+      <tr><td>2</td><td>Zero-filter pure story mode</td><td>Duplicates Learn Mode while discarding the explorer — weaker version of survivor #1.</td></tr>
+      <tr><td>3</td><td>Performance/SEO static-render track</td><td>Scope overrun — not part of the asked focus.</td></tr>
+      <tr><td>4</td><td>Shepherd.js tours</td><td>Commercial license for production; Driver.js chosen instead (folded into #5).</td></tr>
+      <tr><td>5</td><td>Scored quizzes / check-your-understanding tests</td><td>External evidence shows drop-off; prediction prompts (survivor #6) are the better mechanic.</td></tr>
+      <tr><td>6</td><td>Standalone shareable takeaway cards</td><td>Below floor alone; folded into survivor #3 as URL-state encoding.</td></tr>
+      <tr><td>7</td><td>Merge ResearchBriefing into Chat</td><td>Folded into survivors #1 and #7 rather than standing alone.</td></tr>
+      <tr><td>8</td><td>Museum-style 3-tier interpretive labels</td><td>Folded into survivor #3's layered caption pattern.</td></tr>
+      <tr><td>9</td><td>Chapter sidebar with progress</td><td>Component of survivor #1, not a separate idea.</td></tr>
+      <tr><td>10</td><td>Tour-as-data JSON engine</td><td>Component of survivor #1, not a separate idea.</td></tr>
+      <tr><td>11</td><td>Design-token extraction as standalone</td><td>Folded into survivors #2 and #7.</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<footer class="composition-signal">Composed 2026-06-11 by ce-ideate (run f31f26cf) from focus: "interactive learning tool, light/dark mode, easy UX/UI, remove redundant files, amazing experience" · grounding: codebase scan + docs/design.md + agent-chat plan docs + external research</footer>
+
+</div>
+</body>
+</html>

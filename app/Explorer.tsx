@@ -2,7 +2,7 @@
 
 import { useAtomSet, useAtomValue } from "@effect-atom/atom-react";
 import { Brain, RotateCcw, Search, ShieldCheck, SlidersHorizontal, Weight, X, Zap } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect, useRef, useCallback } from "react";
 import {
   CartesianGrid,
   ReferenceLine,
@@ -99,6 +99,16 @@ export function Explorer({
   const setSelectedId = useAtomSet(selectedRouteAtom);
   const [providersOpen, setProvidersOpen] = useState(true);
   const [makersOpen, setMakersOpen] = useState(false);
+  const [introDismissed, setIntroDismissed] = useState(true); // true = hidden until mount check
+
+  useEffect(() => {
+    setIntroDismissed(!!localStorage.getItem("seenIntro"));
+  }, []);
+
+  const dismissIntro = useCallback(() => {
+    localStorage.setItem("seenIntro", "1");
+    setIntroDismissed(true);
+  }, []);
 
   const makers = useMemo(() => Array.from(new Set(routes.map((r) => r.maker))).toSorted(), [routes]);
   const providers = useMemo(
@@ -164,6 +174,29 @@ export function Explorer({
   const selected = visible.find((r) => r.id === selectedId) ?? ranked[0] ?? nonRejected[0] ?? visible[0] ?? null;
   const cheapest = nonRejected.toSorted((a, b) => a.blended - b.blended)[0] ?? null;
   const fastest = nonRejected.toSorted((a, b) => b.throughput - a.throughput)[0] ?? null;
+  const bestReliability = sovereign.length > 0
+    ? Math.max(...sovereign.map((r) => r.reliabilityScore))
+    : nonRejected.length > 0 ? Math.max(...nonRejected.map((r) => r.reliabilityScore)) : null;
+
+  const insightHeading = useMemo(() => {
+    if (visible.length === 0) return "No routes match — try widening tiers or clearing a filter";
+    if (sovereign.length > 0 && bestReliability !== null) {
+      return `EU-sovereign routes lead on reliability — ${sovereign.length} route${sovereign.length !== 1 ? "s" : ""} score ${bestReliability}+`;
+    }
+    if (nonRejected.length > 0 && bestReliability !== null) {
+      return `${nonRejected.length} usable route${nonRejected.length !== 1 ? "s" : ""} match — best reliability ${bestReliability}/100`;
+    }
+    return "Showing all routes including rejected";
+  }, [visible.length, sovereign.length, nonRejected.length, bestReliability]);
+
+  const insightSummary = useMemo(() => {
+    if (visible.length === 0) return "No routes match — try widening tiers or clearing a capability filter";
+    if (visible.length === 1) return `1 route matches · reliability ${visible[0]?.reliabilityScore ?? "-"}/100 · ${visible[0]?.tier === "A" ? "EU-sovereign" : visible[0]?.tier === "B" ? "EU-residency" : "restricted"}`;
+    const sovereignCount = sovereign.length;
+    const best = bestReliability ?? "-";
+    return `${visible.length} routes match · best reliability ${best}/100 · ${sovereignCount} EU-sovereign`;
+  }, [visible, sovereign.length, bestReliability]);
+
   const averageReliability =
     nonRejected.length > 0
       ? Math.round(nonRejected.reduce((sum, r) => sum + r.reliabilityScore, 0) / nonRejected.length)
@@ -235,10 +268,18 @@ export function Explorer({
 
   return (
     <section className="explorer-shell">
+      {!introDismissed && (
+        <div className="intro-banner" role="note">
+          <span>This is the Tier-A EU-sovereign shortlist ranked by reliability — widen to Tier B or ask the chat panel to guide you.</span>
+          <button className="intro-dismiss" onClick={dismissIntro} aria-label="Dismiss">✕</button>
+        </div>
+      )}
+
       <div className="hero-bar">
         <div>
           <div className="eyebrow">Interactive EU AI gateway explorer</div>
-          <h2>Choose a compliant route before choosing a model</h2>
+          <h2>{insightHeading}</h2>
+          <p className="insight-summary">{insightSummary}</p>
         </div>
         <div className="hero-actions" aria-label="Filter presets">
           <Button onClick={() => applyPreset("sovereign")}>
@@ -487,7 +528,7 @@ export function Explorer({
             <CardHeader className="section-title-row">
               <div>
                 <div className="eyebrow">Recommended now</div>
-                <CardTitle>Ranked sovereign routes</CardTitle>
+                <CardTitle>{sovereign.length > 0 ? `${sovereign.length} EU-sovereign route${sovereign.length !== 1 ? "s" : ""} ranked by reliability` : "No sovereign routes match"}</CardTitle>
               </div>
               {cheapest && (
                 <div className="mini-fact">
@@ -552,26 +593,121 @@ export function ProviderCoverageSection({
   coverage,
   vendorScope,
   overlaps,
+  provider = "All",
+  setProvider = () => {},
 }: {
   readonly summaries: ReadonlyArray<ProviderCoverageSummaryView>;
   readonly coverage: ReadonlyArray<ProviderCoverageView>;
   readonly vendorScope: ReadonlyArray<VendorScopeView>;
   readonly overlaps: ReadonlyArray<MultiVendorModelView>;
+  readonly provider?: string;
+  readonly setProvider?: (val: string) => void;
 }) {
   const coverageFilters = useMemo(
     () => Array.from(new Set(coverage.flatMap((row) => [row.platform, row.provider]))).toSorted(),
     [coverage],
   );
-  const [provider, setProvider] = useState<string>("All");
-  const filtered = useMemo(
+
+  const [modelSearch, setModelSearch] = useState("");
+
+  const filteredByProvider = useMemo(
     () => (provider === "All" ? coverage : coverage.filter((row) => row.platform === provider || row.provider === provider)),
     [coverage, provider],
   );
+
+  const filtered = useMemo(() => {
+    const q = modelSearch.trim().toLowerCase();
+    if (!q) return filteredByProvider;
+    return filteredByProvider.filter((row) => row.model.toLowerCase().includes(q));
+  }, [filteredByProvider, modelSearch]);
+
+  const tableContainerRef = useRef<HTMLDivElement | null>(null);
+  const [scrollTop, setScrollTop] = useState(0);
+  const [containerHeight, setContainerHeight] = useState(600);
+
+  useEffect(() => {
+    const container = tableContainerRef.current;
+    if (!container) return;
+
+    const handleScroll = () => {
+      setScrollTop(container.scrollTop);
+    };
+    const handleResize = () => {
+      setContainerHeight(container.clientHeight);
+    };
+
+    container.addEventListener("scroll", handleScroll, { passive: true });
+    window.addEventListener("resize", handleResize);
+
+    // Initial size
+    setContainerHeight(container.clientHeight);
+
+    return () => {
+      container.removeEventListener("scroll", handleScroll);
+      window.removeEventListener("resize", handleResize);
+    };
+  }, [provider, modelSearch]);
+
+  const rowHeight = 65; // Estimated row height for table rows
+  const overscan = 10;
+  const isVirtualized = filtered.length > 1000;
+
+  const { totalHeight, topSpacerHeight, bottomSpacerHeight, visibleRows } = useMemo(() => {
+    if (!isVirtualized) {
+      return { totalHeight: 0, topSpacerHeight: 0, bottomSpacerHeight: 0, visibleRows: filtered };
+    }
+    const totalHeight = filtered.length * rowHeight;
+    const startIndex = Math.max(0, Math.floor(scrollTop / rowHeight) - overscan);
+    const endIndex = Math.min(filtered.length, Math.ceil((scrollTop + containerHeight) / rowHeight) + overscan);
+
+    const topSpacerHeight = startIndex * rowHeight;
+    const bottomSpacerHeight = (filtered.length - endIndex) * rowHeight;
+    const visibleRows = filtered.slice(startIndex, endIndex);
+
+    return { totalHeight, topSpacerHeight, bottomSpacerHeight, visibleRows };
+  }, [filtered, scrollTop, containerHeight, isVirtualized]);
+  const selectedProviderLabel = provider === "All" ? "All vendors and platforms" : provider;
+  const selectedSummary = summaries.find((summary) => summary.platform === provider || summary.provider === provider) ?? null;
   const bedrockFiltered = filtered.filter((row) => row.platform === "AWS Bedrock");
   const inRegionCount = filtered.filter((row) => row.regions.some((region) => region.inRegion)).length;
   const geoCount = filtered.filter((row) => row.regions.some((region) => region.euGeo)).length;
   const officialCount = filtered.filter((row) => row.sourceType === "official").length;
   const reportDerivedCount = filtered.length - officialCount;
+  const vendorModelGroups = useMemo(() => {
+    const groups = new Map<
+      string,
+      {
+        readonly platform: string;
+        readonly provider: string;
+        readonly requirementFit: ProviderCoverageView["requirementFit"];
+        readonly tier: Tier;
+        readonly sourceType: ProviderCoverageView["sourceType"];
+        readonly models: Array<ProviderCoverageView>;
+      }
+    >();
+    for (const row of filtered) {
+      const key = `${row.platform}:::${row.provider}`;
+      const existing = groups.get(key);
+      if (existing) {
+        existing.models.push(row);
+        continue;
+      }
+      groups.set(key, {
+        platform: row.platform,
+        provider: row.provider,
+        requirementFit: row.requirementFit,
+        tier: row.tier,
+        sourceType: row.sourceType,
+        models: [row],
+      });
+    }
+    return Array.from(groups.values())
+      .map((group) => ({
+        ...group,
+        models: group.models.toSorted((a, b) => a.model.localeCompare(b.model)),
+      }))
+      .toSorted((a, b) => b.models.length - a.models.length || a.platform.localeCompare(b.platform) || a.provider.localeCompare(b.provider));
+  }, [filtered]);
   const scopeCounts = useMemo(() => ({
     covered: vendorScope.filter((row) => row.status === "covered" || row.status === "covered-with-conditions").length,
     excluded: vendorScope.filter((row) => row.status === "excluded").length,
@@ -607,6 +743,80 @@ export function ProviderCoverageSection({
         <Badge variant="secondary">{coverage.length} qualifying rows</Badge>
       </CardHeader>
       <CardContent>
+        <div className="vendor-first-panel">
+          <div>
+            <div className="eyebrow">Start with vendor</div>
+            <h3>Filter the European model catalog by provider or platform</h3>
+            <div className="coverage-facts">
+              <span>{selectedProviderLabel}</span>
+              <span>{filtered.length} matching models</span>
+              <span>{vendorModelGroups.length} vendor groups</span>
+              <span>{inRegionCount} strict EU-region rows</span>
+              <span>{geoCount} EU-geo rows</span>
+            </div>
+          </div>
+          <Select value={provider} onValueChange={(value) => setProvider(value ?? "All")}>
+            <SelectTrigger className="vendor-first-select">
+              <SelectValue placeholder="Choose vendor or platform" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="All">All vendors and platforms</SelectItem>
+              {coverageFilters.map((name) => (
+                <SelectItem key={name} value={name}>
+                  {name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <div className="vendor-quick-picks" aria-label="Common vendor filters">
+            <Button size="sm" variant={provider === "All" ? "default" : "outline"} onClick={() => setProvider("All")}>
+              All
+            </Button>
+            {summaries
+              .toSorted((a, b) => b.modelCount - a.modelCount || a.platform.localeCompare(b.platform))
+              .slice(0, 8)
+              .map((summary) => (
+                <Button
+                  size="sm"
+                  variant={provider === summary.platform ? "default" : "outline"}
+                  key={summary.platform}
+                  onClick={() => setProvider(summary.platform)}
+                >
+                  {summary.platform} ({summary.modelCount})
+                </Button>
+              ))}
+          </div>
+          <div className="search-row vendor-model-search" style={{ gridColumn: "1 / -1", marginTop: "4px" }}>
+            <Search className="search-icon" aria-hidden="true" />
+            <Input
+              type="text"
+              placeholder="Search models within selected vendor (e.g. llama, claude...)"
+              value={modelSearch}
+              onChange={(e) => setModelSearch(e.target.value)}
+            />
+            {modelSearch && (
+              <Button size="icon" variant="ghost" aria-label="Clear model search" onClick={() => setModelSearch("")}>
+                <X aria-hidden="true" />
+              </Button>
+            )}
+          </div>
+          {selectedSummary ? (
+            <div className="vendor-first-note">
+              <Badge style={{ background: `color-mix(in srgb, ${TIER_META[selectedSummary.tier].color} 18%, white)`, color: "var(--core)" }}>
+                Tier {selectedSummary.tier}
+              </Badge>
+              <span>{selectedSummary.requirementFit === "sovereign" ? "EU sovereign" : "EU residency"}</span>
+              <span>{selectedSummary.evidenceNote}</span>
+            </div>
+          ) : (
+            <div className="vendor-first-note">
+              <span>Showing every currently verified European vendor route in the catalog.</span>
+            </div>
+          )}
+        </div>
+
+        <Separator className="coverage-separator" />
+
         <div className="scope-panel">
           <div className="section-title-row compact">
             <div>
@@ -680,6 +890,59 @@ export function ProviderCoverageSection({
 
         <Separator className="coverage-separator" />
 
+        <div className="vendor-directory">
+          <div className="section-title-row compact">
+            <div>
+              <div className="eyebrow">Provider model directory</div>
+              <h3>All EU-available models grouped by vendor and platform</h3>
+            </div>
+            <Badge variant="secondary">{vendorModelGroups.length} vendor groups</Badge>
+          </div>
+          <div className="vendor-directory-grid">
+            {vendorModelGroups.map((group) => (
+              <div className="vendor-directory-row" key={`${group.platform}-${group.provider}`}>
+                <div className="coverage-summary-head">
+                  <div>
+                    <strong>{group.provider}</strong>
+                    <div className="note">{group.platform}</div>
+                  </div>
+                  <div className="region-list">
+                    <Badge style={{ background: `color-mix(in srgb, ${TIER_META[group.tier].color} 18%, white)`, color: "var(--core)" }}>
+                      Tier {group.tier}
+                    </Badge>
+                    <Badge variant="secondary">{group.models.length} models</Badge>
+                  </div>
+                </div>
+                <div className="vendor-model-list">
+                  {group.models.map((row) => (
+                    <div className="vendor-model-row" key={`${row.platform}-${row.provider}-${row.model}`}>
+                      <span>{row.model}</span>
+                      <div className="region-list">
+                        {row.regions.length > 0 ? (
+                          row.regions.map((region) => (
+                            <span className="region-chip compact" key={`${row.platform}-${row.provider}-${row.model}-${region.code}`}>
+                              {region.code}
+                              <small>
+                                {region.inRegion ? "I" : ""}
+                                {region.euGeo ? "G" : ""}
+                                {region.legacyEol ? ` EOL ${region.legacyEol}` : ""}
+                              </small>
+                            </span>
+                          ))
+                        ) : (
+                          <span className="region-chip compact">vendor-level</span>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <Separator className="coverage-separator" />
+
         <div className="overlap-panel">
           <div className="section-title-row compact">
             <div>
@@ -749,22 +1012,9 @@ export function ProviderCoverageSection({
               {reportDerivedCount > 0 ? <span>{reportDerivedCount} report-derived rows</span> : null}
             </div>
           </div>
-          <Select value={provider} onValueChange={(value) => setProvider(value ?? "All")}>
-            <SelectTrigger className="coverage-select">
-              <SelectValue placeholder="Filter vendor or publisher" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="All">All vendors and publishers</SelectItem>
-              {coverageFilters.map((name) => (
-                <SelectItem key={name} value={name}>
-                  {name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
         </div>
 
-        <div className="tablewrap coverage-tablewrap">
+        <div ref={tableContainerRef} className="tablewrap coverage-tablewrap">
           <Table>
             <TableHeader>
               <TableRow>
@@ -776,7 +1026,12 @@ export function ProviderCoverageSection({
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filtered.map((row) => (
+              {isVirtualized && topSpacerHeight > 0 && (
+                <TableRow style={{ height: topSpacerHeight }}>
+                  <TableCell colSpan={5} style={{ height: topSpacerHeight, padding: 0 }} />
+                </TableRow>
+              )}
+              {visibleRows.map((row) => (
                 <TableRow key={`${row.platform}-${row.provider}-${row.model}`}>
                   <TableCell>{row.provider}</TableCell>
                   <TableCell>
@@ -815,6 +1070,11 @@ export function ProviderCoverageSection({
                   </TableCell>
                 </TableRow>
               ))}
+              {isVirtualized && bottomSpacerHeight > 0 && (
+                <TableRow style={{ height: bottomSpacerHeight }}>
+                  <TableCell colSpan={5} style={{ height: bottomSpacerHeight, padding: 0 }} />
+                </TableRow>
+              )}
             </TableBody>
           </Table>
         </div>

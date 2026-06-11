@@ -9,6 +9,13 @@ import { Send, Sparkles, ChevronRight, RefreshCw, MessageSquare, Terminal } from
 import type { RouteView } from "@/domain";
 import { Button } from "@/components/ui/button";
 
+const starterPrompts = [
+  "Show me the safest EU-only route for coding",
+  "Why is Tier C excluded?",
+  "Compare Tier A vs Tier B reliability",
+  "Walk me through choosing a route",
+] as const;
+
 export function Chat({
   routes,
   open,
@@ -66,6 +73,11 @@ export function Chat({
     setInputValue("");
   };
 
+  const handleStarterPrompt = (prompt: string) => {
+    if (status === "submitted" || status === "streaming") return;
+    sendMessage({ text: prompt }, { body: { currentFilters: filters } });
+  };
+
   return (
     <div className="chat-panel" data-open={open ? "true" : "false"}>
       <div className="chat-header">
@@ -84,25 +96,18 @@ export function Chat({
             <p>
               Ask me to filter the workspace, select compliant models, or query database metrics.
             </p>
-            <div className="suggestions">
-              <button
-                type="button"
-                onClick={() => setInputValue("Show only Tier A sovereign routes")}
-              >
-                "Show only Tier A sovereign routes"
-              </button>
-              <button
-                type="button"
-                onClick={() => setInputValue("Find the cheapest reasoning model in the EU")}
-              >
-                "Find the cheapest reasoning model in the EU"
-              </button>
-              <button
-                type="button"
-                onClick={() => setInputValue("What is the fastest route overall?")}
-              >
-                "What is the fastest route overall?"
-              </button>
+            <div className="suggestions starter-prompts" aria-label="Starter prompts">
+              {starterPrompts.map((prompt) => (
+                <button
+                  key={prompt}
+                  type="button"
+                  className="starter-prompt-chip"
+                  onClick={() => handleStarterPrompt(prompt)}
+                  disabled={status === "submitted" || status === "streaming"}
+                >
+                  {prompt}
+                </button>
+              ))}
             </div>
           </div>
         ) : (

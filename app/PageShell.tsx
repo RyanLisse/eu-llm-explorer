@@ -1,17 +1,73 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import type { ExplorerData } from "@/services";
 import type { ChainView } from "@/domain";
 import { Explorer, ProviderCoverageSection } from "./Explorer";
 import { Chat } from "./Chat";
 import { ResearchBriefing } from "./ResearchBriefing";
-import { MessageSquare, SlidersHorizontal, Globe, GitBranch, FlaskConical } from "lucide-react";
+import { MessageSquare, SlidersHorizontal, Globe, GitBranch, FlaskConical, Sun, Moon } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 export function PageShell({ data }: { readonly data: ExplorerData }) {
-  const [chatOpen, setChatOpen] = useState(true);
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const pathname = usePathname();
+
+  const tabParam = searchParams.get("tab") || "coverage";
+  const vendorParam = searchParams.get("vendor") || "All";
+
+  const [activeTab, setActiveTab] = useState(tabParam);
+  const [chatOpen, setChatOpen] = useState(tabParam !== "coverage");
+  const [provider, setProviderState] = useState(vendorParam);
+  const [mounted, setMounted] = useState(false);
+  const [theme, setTheme] = useState<"light" | "dark">("dark");
+
+  useEffect(() => {
+    setMounted(true);
+    // Derive from what the blocking script already applied
+    const isDark = document.documentElement.classList.contains("dark");
+    setTheme(isDark ? "dark" : "light");
+  }, []);
+
+  const toggleTheme = () => {
+    const nextTheme = theme === "dark" ? "light" : "dark";
+    setTheme(nextTheme);
+    localStorage.setItem("theme", nextTheme);
+    document.documentElement.classList.toggle("dark", nextTheme === "dark");
+  };
+
+  useEffect(() => {
+    setActiveTab(tabParam);
+  }, [tabParam]);
+
+  useEffect(() => {
+    setProviderState(vendorParam);
+  }, [vendorParam]);
+
+  const handleTabChange = (tab: string) => {
+    setActiveTab(tab);
+    const params = new URLSearchParams(searchParams.toString());
+    params.set("tab", tab);
+    router.replace(`${pathname}?${params.toString()}`);
+
+    if (tab === "coverage") {
+      setChatOpen(false);
+    }
+  };
+
+  const setProvider = (val: string) => {
+    setProviderState(val);
+    const params = new URLSearchParams(searchParams.toString());
+    if (val === "All" || !val) {
+      params.delete("vendor");
+    } else {
+      params.set("vendor", val);
+    }
+    router.replace(`${pathname}?${params.toString()}`);
+  };
 
   return (
     <div className="page-root">
@@ -25,58 +81,76 @@ export function PageShell({ data }: { readonly data: ExplorerData }) {
             General workload routing · provider-selectable · sovereign-first · reports updated June 2026
           </div>
         </div>
-        <Button
-          variant="outline"
-          className="chat-toggle-btn"
-          onClick={() => setChatOpen(!chatOpen)}
-        >
-          <MessageSquare size={16} />
-          <span style={{ marginLeft: 6 }}>{chatOpen ? "Hide Agent" : "Show Agent"}</span>
-        </Button>
+        <div style={{ display: "flex", gap: "8px", marginLeft: "auto" }}>
+          <Button
+            variant="outline"
+            className="chat-toggle-btn"
+            onClick={toggleTheme}
+            aria-label="Toggle theme"
+          >
+            {mounted ? (theme === "dark" ? <Sun size={16} /> : <Moon size={16} />) : <Sun size={16} />}
+            <span style={{ marginLeft: 6 }}>{mounted ? (theme === "dark" ? "Light Mode" : "Dark Mode") : "Light Mode"}</span>
+          </Button>
+          <Button
+            variant="outline"
+            className="chat-toggle-btn"
+            onClick={() => setChatOpen(!chatOpen)}
+          >
+            <MessageSquare size={16} />
+            <span style={{ marginLeft: 6 }}>{chatOpen ? "Hide Agent" : "Show Agent"}</span>
+          </Button>
+        </div>
       </header>
 
       <div className="page-body">
         <main className="page-main">
-          <Tabs defaultValue="explorer" className="main-tabs">
+          <Tabs value={activeTab} onValueChange={(value) => handleTabChange(String(value))} className="main-tabs">
             <div className="main-tabs-bar">
               <TabsList>
-                <TabsTrigger value="explorer">
+                <TabsTrigger value="explorer" onClick={() => handleTabChange("explorer")}>
                   <SlidersHorizontal size={13} aria-hidden="true" />
                   Explorer
                 </TabsTrigger>
-                <TabsTrigger value="coverage">
+                <TabsTrigger value="coverage" onClick={() => handleTabChange("coverage")}>
                   <Globe size={13} aria-hidden="true" />
                   Coverage
                 </TabsTrigger>
-                <TabsTrigger value="chains">
+                <TabsTrigger value="chains" onClick={() => handleTabChange("chains")}>
                   <GitBranch size={13} aria-hidden="true" />
                   Chains
                 </TabsTrigger>
-                <TabsTrigger value="research">
+                <TabsTrigger value="research" onClick={() => handleTabChange("research")}>
                   <FlaskConical size={13} aria-hidden="true" />
                   Research
                 </TabsTrigger>
               </TabsList>
             </div>
 
-            <TabsContent value="explorer" className="main-tab-panel">
-              <div className="wrap">
-                <Explorer routes={data.routes} />
-              </div>
-            </TabsContent>
+            <div className="main-tab-panel" hidden={activeTab !== "explorer"}>
+              {activeTab === "explorer" ? (
+                <div className="wrap">
+                  <Explorer routes={data.routes} />
+                </div>
+              ) : null}
+            </div>
 
-            <TabsContent value="coverage" className="main-tab-panel">
-              <div className="wrap">
-                <ProviderCoverageSection
-                  summaries={data.providerCoverageSummaries}
-                  coverage={data.providerCoverage}
-                  vendorScope={data.vendorScope}
-                  overlaps={data.multiVendorModels}
-                />
-              </div>
-            </TabsContent>
+            <div className="main-tab-panel" hidden={activeTab !== "coverage"}>
+              {activeTab === "coverage" ? (
+                <div className="wrap">
+                  <ProviderCoverageSection
+                    summaries={data.providerCoverageSummaries}
+                    coverage={data.providerCoverage}
+                    vendorScope={data.vendorScope}
+                    overlaps={data.multiVendorModels}
+                    provider={provider}
+                    setProvider={setProvider}
+                  />
+                </div>
+              ) : null}
+            </div>
 
-            <TabsContent value="chains" className="main-tab-panel">
+            <div className="main-tab-panel" hidden={activeTab !== "chains"}>
+              {activeTab === "chains" ? (
               <div className="wrap">
                 <details className="callout brand context-card" open>
                   <summary>
@@ -143,13 +217,16 @@ export function PageShell({ data }: { readonly data: ExplorerData }) {
                   guarantee — see README.md. Themed to the Blinqx / HippoLine design system.
                 </p>
               </div>
-            </TabsContent>
+              ) : null}
+            </div>
 
-            <TabsContent value="research" className="main-tab-panel">
-              <div className="wrap">
-                <ResearchBriefing />
-              </div>
-            </TabsContent>
+            <div className="main-tab-panel" hidden={activeTab !== "research"}>
+              {activeTab === "research" ? (
+                <div className="wrap">
+                  <ResearchBriefing />
+                </div>
+              ) : null}
+            </div>
           </Tabs>
         </main>
 
