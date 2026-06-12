@@ -6,12 +6,13 @@ import type { ExplorerData } from "@/services";
 import { Explorer } from "./Explorer";
 import { VendorCompare } from "./VendorCompare";
 import { Chat } from "./Chat";
-import { ResearchBriefing } from "./ResearchBriefing";
-import { MessageSquare, SlidersHorizontal, ArrowLeftRight, FlaskConical, Sun, Moon } from "lucide-react";
+import { AgentPresentation } from "./AgentPresentation";
+import { ResearchBook } from "./ResearchBook";
+import { MessageSquare, SlidersHorizontal, ArrowLeftRight, BookOpen, Sun, Moon, Presentation } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
-const TABS = ["compare", "explorer", "research"] as const;
+const TABS = ["compare", "presentation", "explorer", "research"] as const;
 
 export function PageShell({ data }: { readonly data: ExplorerData }) {
   const searchParams = useSearchParams();
@@ -70,10 +71,10 @@ export function PageShell({ data }: { readonly data: ExplorerData }) {
         <img className="brand-mark" src="/brand/blinqx-icon.png" alt="" />
         <div>
           <h1>
-            EU AI Gateway Explorer <span className="accent">·</span> Vendor Comparison
+            EU AI Gateway Explorer <span className="accent">·</span> Agent Strategy
           </h1>
           <div className="sub">
-            Compare EU platforms against your Azure AI Foundry baseline · models, price, speed, sovereignty · June 2026
+            General agent workloads across Blinqx sectors · EU model routing, sovereignty, fallback and governance · June 2026
           </div>
         </div>
         <div style={{ display: "flex", gap: "8px", marginLeft: "auto" }}>
@@ -106,13 +107,17 @@ export function PageShell({ data }: { readonly data: ExplorerData }) {
                   <ArrowLeftRight size={13} aria-hidden="true" />
                   Compare
                 </TabsTrigger>
+                <TabsTrigger value="presentation" onClick={() => handleTabChange("presentation")}>
+                  <Presentation size={13} aria-hidden="true" />
+                  Presentation
+                </TabsTrigger>
                 <TabsTrigger value="explorer" onClick={() => handleTabChange("explorer")}>
                   <SlidersHorizontal size={13} aria-hidden="true" />
                   Advanced
                 </TabsTrigger>
                 <TabsTrigger value="research" onClick={() => handleTabChange("research")}>
-                  <FlaskConical size={13} aria-hidden="true" />
-                  Research
+                  <BookOpen size={13} aria-hidden="true" />
+                  Book
                 </TabsTrigger>
               </TabsList>
             </div>
@@ -131,6 +136,14 @@ export function PageShell({ data }: { readonly data: ExplorerData }) {
               ) : null}
             </div>
 
+            <div className="main-tab-panel" hidden={activeTab !== "presentation"}>
+              {activeTab === "presentation" ? (
+                <div className="wrap presentation-wrap">
+                  <AgentPresentation />
+                </div>
+              ) : null}
+            </div>
+
             <div className="main-tab-panel" hidden={activeTab !== "explorer"}>
               {activeTab === "explorer" ? (
                 <div className="wrap">
@@ -141,8 +154,8 @@ export function PageShell({ data }: { readonly data: ExplorerData }) {
 
             <div className="main-tab-panel" hidden={activeTab !== "research"}>
               {activeTab === "research" ? (
-                <div className="wrap">
-                  <ResearchBriefing />
+                <div className="wrap book-wrap">
+                  <ResearchBook />
                 </div>
               ) : null}
             </div>
