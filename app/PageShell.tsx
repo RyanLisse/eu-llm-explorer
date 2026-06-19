@@ -1,8 +1,11 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useSearchParams, useRouter, usePathname } from "next/navigation";
+import { useAtomSet, useAtomValue } from "@effect-atom/atom-react";
 import type { ExplorerData } from "@/services";
+import { APP_TABS, AZURE_COMPARE_VENDOR_KEY, DEFAULT_COMPARE_STATE, type AppTab, type UiTheme } from "@/agent/constants";
+import { activeTabAtom, compareStateAtom, uiStateAtom } from "@/atoms";
 import { Explorer } from "./Explorer";
 import { VendorCompare } from "./VendorCompare";
 import { Chat } from "./Chat";
@@ -12,56 +15,92 @@ import { MessageSquare, SlidersHorizontal, ArrowLeftRight, BookOpen, Sun, Moon, 
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
-const TABS = ["compare", "presentation", "explorer", "research"] as const;
-
 export function PageShell({ data }: { readonly data: ExplorerData }) {
   const searchParams = useSearchParams();
   const router = useRouter();
   const pathname = usePathname();
 
   const rawTab = searchParams.get("tab") || "compare";
-  const tabParam = (TABS as ReadonlyArray<string>).includes(rawTab) ? rawTab : "compare";
+  const tabParam = (APP_TABS as ReadonlyArray<string>).includes(rawTab) ? (rawTab as AppTab) : "compare";
   const vendorParam = searchParams.get("vendor") || "Mistral La Plateforme";
 
-  const [activeTab, setActiveTab] = useState(tabParam);
-  const [chatOpen, setChatOpen] = useState(false);
-  const [vendor, setVendorState] = useState(vendorParam);
+  const activeTab = useAtomValue(activeTabAtom);
+  const setActiveTab = useAtomSet(activeTabAtom);
+  const uiState = useAtomValue(uiStateAtom);
+  const setUiState = useAtomSet(uiStateAtom);
+  const compareState = useAtomValue(compareStateAtom);
+  const setCompareState = useAtomSet(compareStateAtom);
   const [mounted, setMounted] = useState(false);
-  const [theme, setTheme] = useState<"light" | "dark">("dark");
+
+  const chatOpen = uiState.chatOpen;
+  const theme = uiState.theme;
+  const vendor = compareState.primaryVendor;
+  const compareVendorKeys = useMemo(
+    () =>
+      Array.from(
+        new Set([
+          AZURE_COMPARE_VENDOR_KEY,
+          ...data.providerCoverageSummaries
+            .filter((summary) => summary.provider !== "Microsoft Azure")
+            .map((summary) => summary.platform),
+        ]),
+      ),
+    [data.providerCoverageSummaries],
+  );
+  const fallbackVendor =
+    compareVendorKeys.find((key) => key === DEFAULT_COMPARE_STATE.primaryVendor) ??
+    compareVendorKeys.find((key) => key !== AZURE_COMPARE_VENDOR_KEY) ??
+    AZURE_COMPARE_VENDOR_KEY;
+  const normalizedVendorParam = compareVendorKeys.includes(vendorParam) ? vendorParam : fallbackVendor;
 
   useEffect(() => {
     setMounted(true);
     // Derive from what the blocking script already applied
     const isDark = document.documentElement.classList.contains("dark");
-    setTheme(isDark ? "dark" : "light");
-  }, []);
+    setUiState((current) => ({ ...current, theme: isDark ? "dark" : "light" }));
+  }, [setUiState]);
 
-  const toggleTheme = () => {
-    const nextTheme = theme === "dark" ? "light" : "dark";
-    setTheme(nextTheme);
+  const applyTheme = (nextTheme: UiTheme) => {
+    setUiState((current) => ({ ...current, theme: nextTheme }));
     localStorage.setItem("theme", nextTheme);
     document.documentElement.classList.toggle("dark", nextTheme === "dark");
   };
 
+  const toggleTheme = () => {
+    applyTheme(theme === "dark" ? "light" : "dark");
+  };
+
   useEffect(() => {
     setActiveTab(tabParam);
-  }, [tabParam]);
+    setUiState((current) => ({ ...current, activeTab: tabParam }));
+  }, [setActiveTab, setUiState, tabParam]);
 
   useEffect(() => {
-    setVendorState(vendorParam);
-  }, [vendorParam]);
+    setCompareState((current) =>
+      current.primaryVendor === normalizedVendorParam ? current : { ...current, primaryVendor: normalizedVendorParam },
+    );
+    if (vendorParam !== normalizedVendorParam) {
+      const params = new URLSearchParams(searchParams.toString());
+      params.set("vendor", normalizedVendorParam);
+      router.replace(`${pathname}?${params.toString()}`);
+    }
+  }, [normalizedVendorParam, pathname, router, searchParams, setCompareState, vendorParam]);
 
-  const handleTabChange = (tab: string) => {
+  const handleTabChange = (tab: AppTab) => {
     setActiveTab(tab);
+    setUiState((current) => ({ ...current, activeTab: tab }));
     const params = new URLSearchParams(searchParams.toString());
     params.set("tab", tab);
     router.replace(`${pathname}?${params.toString()}`);
   };
 
   const setVendor = (val: string) => {
-    setVendorState(val);
+    const normalizedVendor = compareVendorKeys.includes(val) ? val : fallbackVendor;
+    setCompareState((current) =>
+      current.primaryVendor === normalizedVendor ? current : { ...current, primaryVendor: normalizedVendor },
+    );
     const params = new URLSearchParams(searchParams.toString());
-    params.set("vendor", val);
+    params.set("vendor", normalizedVendor);
     router.replace(`${pathname}?${params.toString()}`);
   };
 
@@ -90,7 +129,7 @@ export function PageShell({ data }: { readonly data: ExplorerData }) {
           <Button
             variant="outline"
             className="chat-toggle-btn"
-            onClick={() => setChatOpen(!chatOpen)}
+            onClick={() => setUiState((current) => ({ ...current, chatOpen: !current.chatOpen }))}
           >
             <MessageSquare size={16} />
             <span style={{ marginLeft: 6 }}>{chatOpen ? "Hide Agent" : "Show Agent"}</span>
@@ -100,7 +139,7 @@ export function PageShell({ data }: { readonly data: ExplorerData }) {
 
       <div className="page-body">
         <main className="page-main">
-          <Tabs value={activeTab} onValueChange={(value) => handleTabChange(String(value))} className="main-tabs">
+          <Tabs value={activeTab} onValueChange={(value) => handleTabChange(value as AppTab)} className="main-tabs">
             <div className="main-tabs-bar">
               <TabsList>
                 <TabsTrigger value="compare" onClick={() => handleTabChange("compare")}>
@@ -162,7 +201,15 @@ export function PageShell({ data }: { readonly data: ExplorerData }) {
           </Tabs>
         </main>
 
-        <Chat routes={data.routes} open={chatOpen} />
+        <Chat
+          routes={data.routes}
+          open={chatOpen}
+          setActiveTab={handleTabChange}
+          setChatOpen={(open) => setUiState((current) => ({ ...current, chatOpen: open }))}
+          setTheme={applyTheme}
+          setVendor={setVendor}
+          compareVendorKeys={compareVendorKeys}
+        />
       </div>
     </div>
   );

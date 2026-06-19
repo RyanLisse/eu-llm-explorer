@@ -1,7 +1,14 @@
 "use client";
 
-import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { useEffect, useMemo, type ReactNode } from "react";
+import { useAtomSet, useAtomValue } from "@effect-atom/atom-react";
 import { Brain, Check, Eye, Search, ShieldAlert, ShieldCheck, SlidersHorizontal, Weight, Wrench, X } from "lucide-react";
+import {
+  AZURE_COMPARE_VENDOR_KEY,
+  DEFAULT_COMPARE_VENDOR_KEYS,
+  type CompareMatrixFilters,
+} from "@/agent/constants";
+import { compareStateAtom } from "@/atoms";
 import type {
   Capability,
   CoverageRegionView,
@@ -30,14 +37,7 @@ const TIER_COLOR: Record<Tier, string> = {
   C: "var(--tier-c)",
 };
 
-const AZURE_KEY = "Azure AI Foundry";
-const MAX_SELECTED_VENDORS = 4;
-const DEFAULT_COMPARE_KEYS = [
-  AZURE_KEY,
-  "Mistral La Plateforme",
-  "Scaleway Generative APIs",
-  "OVHcloud AI Endpoints",
-] as const;
+const AZURE_KEY = AZURE_COMPARE_VENDOR_KEY;
 
 /** Maps a summary platform to the provider tag used on benchmark routes. */
 const PLATFORM_TO_ROUTE_TAG: Record<string, string> = {
@@ -92,23 +92,6 @@ interface VendorVM {
   readonly isCurrent: boolean;
 }
 
-interface VendorStats {
-  readonly modelCount: number;
-  readonly benchCount: number;
-  readonly cheapest: RouteView | null;
-  readonly fastest: RouteView | null;
-  readonly bestReliability: number | null;
-}
-
-interface MatrixFilters {
-  readonly reasoning: boolean;
-  readonly openOnly: boolean;
-  readonly vision: boolean;
-  readonly tools: boolean;
-  readonly sovereignOnly: boolean;
-  readonly hideAzureOnly: boolean;
-}
-
 interface ModelCell {
   readonly vendor: VendorVM;
   readonly modelLabel: string;
@@ -141,20 +124,6 @@ interface MutableComparisonRow {
   readonly publishers: Set<string>;
   readonly cells: Record<string, ModelCell>;
 }
-
-const vendorStats = (vm: VendorVM): VendorStats => {
-  const cheapest = vm.benchmarks.toSorted((a, b) => a.blended - b.blended)[0] ?? null;
-  const fastest = vm.benchmarks.toSorted((a, b) => b.throughput - a.throughput)[0] ?? null;
-  const bestReliability =
-    vm.benchmarks.length > 0 ? Math.max(...vm.benchmarks.map((r) => r.reliabilityScore)) : null;
-  return {
-    modelCount: vm.coverageRows.length,
-    benchCount: vm.benchmarks.length,
-    cheapest,
-    fastest,
-    bestReliability,
-  };
-};
 
 const buildVendors = (
   summaries: ReadonlyArray<ProviderCoverageSummaryView>,
@@ -335,7 +304,7 @@ const buildComparisonRows = (vendors: ReadonlyArray<VendorVM>): ReadonlyArray<Co
   });
 };
 
-const rowMatchesFilters = (row: ComparisonRow, search: string, filters: MatrixFilters): boolean => {
+const rowMatchesFilters = (row: ComparisonRow, search: string, filters: CompareMatrixFilters): boolean => {
   const q = search.trim().toLowerCase();
   if (q) {
     const haystack = [
@@ -368,63 +337,12 @@ export function VendorCompare({
   readonly vendor: string;
   readonly setVendor: (val: string) => void;
 }) {
+  const compareState = useAtomValue(compareStateAtom);
+  const setCompareState = useAtomSet(compareStateAtom);
   const vendors = useMemo(() => buildVendors(summaries, coverage, routes), [summaries, coverage, routes]);
-  const azureVM = vendors.find((v) => v.isCurrent) ?? null;
-  const defaultSelectedKeys = useMemo(() => {
-    const keys: Array<string> = [];
-    const add = (key: string | undefined) => {
-      if (!key || keys.includes(key) || !vendors.some((v) => v.key === key)) return;
-      keys.push(key);
-    };
-
-    add(AZURE_KEY);
-    add(vendor);
-    DEFAULT_COMPARE_KEYS.forEach(add);
-    for (const option of vendors) {
-      if (keys.length >= MAX_SELECTED_VENDORS) break;
-      if (option.tier === "A") add(option.key);
-    }
-    for (const option of vendors) {
-      if (keys.length >= MAX_SELECTED_VENDORS) break;
-      add(option.key);
-    }
-
-    return keys.slice(0, MAX_SELECTED_VENDORS);
-  }, [vendors, vendor]);
-
-  const [selectedVendorKeys, setSelectedVendorKeys] = useState<ReadonlyArray<string>>([]);
-  const [modelSearch, setModelSearch] = useState("");
-  const [matrixFilters, setMatrixFilters] = useState<MatrixFilters>({
-    reasoning: false,
-    openOnly: false,
-    vision: false,
-    tools: false,
-    sovereignOnly: false,
-    hideAzureOnly: true,
-  });
-
-  useEffect(() => {
-    setSelectedVendorKeys((current) => {
-      const valid = current.filter((key) => vendors.some((v) => v.key === key));
-      if (valid.length === 0) return defaultSelectedKeys;
-      const withAzure = valid.includes(AZURE_KEY) || !azureVM ? valid : [AZURE_KEY, ...valid];
-      if (vendor && vendors.some((v) => v.key === vendor) && !withAzure.includes(vendor)) {
-        return [...withAzure, vendor].slice(0, MAX_SELECTED_VENDORS);
-      }
-      return withAzure.slice(0, MAX_SELECTED_VENDORS);
-    });
-  }, [azureVM, defaultSelectedKeys, vendor, vendors]);
-
-  const activeVendorKeys = selectedVendorKeys.length > 0 ? selectedVendorKeys : defaultSelectedKeys;
-  const selectedVendors = useMemo(
-    () => activeVendorKeys
-      .map((key) => vendors.find((v) => v.key === key))
-      .filter((v): v is VendorVM => Boolean(v)),
-    [activeVendorKeys, vendors],
-  );
-
-  const selected = selectedVendors.find((v) => v.key === vendor) ?? selectedVendors.find((v) => !v.isCurrent) ?? selectedVendors[0] ?? null;
-  const comparisonRows = useMemo(() => buildComparisonRows(selectedVendors), [selectedVendors]);
+  const modelSearch = compareState.modelSearch;
+  const matrixFilters = compareState.matrixFilters;
+  const comparisonRows = useMemo(() => buildComparisonRows(vendors), [vendors]);
   const hiddenAzureOnlyCount = useMemo(
     () => comparisonRows.filter((row) => row.hasAzure && row.availabilityCount === 1).length,
     [comparisonRows],
@@ -433,113 +351,96 @@ export function VendorCompare({
     () => comparisonRows.filter((row) => rowMatchesFilters(row, modelSearch, matrixFilters)),
     [comparisonRows, modelSearch, matrixFilters],
   );
+  const selectedModel =
+    filteredRows.find((row) => row.key === compareState.selectedModelKey) ??
+    comparisonRows.find((row) => row.key === compareState.selectedModelKey) ??
+    filteredRows[0] ??
+    comparisonRows[0] ??
+    null;
+  const providerOptions = useMemo(() => {
+    if (!selectedModel) return [];
+    const tierOrder: Record<Tier, number> = { A: 0, B: 1, C: 2 };
+    return Object.values(selectedModel.cells).toSorted((a, b) => {
+      const aBench = a.bench;
+      const bBench = b.bench;
+      return (
+        tierOrder[a.tier] - tierOrder[b.tier] ||
+        Number(Boolean(bBench)) - Number(Boolean(aBench)) ||
+        (bBench?.reliabilityScore ?? -1) - (aBench?.reliabilityScore ?? -1) ||
+        (aBench?.blended ?? Number.POSITIVE_INFINITY) - (bBench?.blended ?? Number.POSITIVE_INFINITY) ||
+        (aBench?.ttft ?? Number.POSITIVE_INFINITY) - (bBench?.ttft ?? Number.POSITIVE_INFINITY) ||
+        a.vendor.label.localeCompare(b.vendor.label)
+      );
+    });
+  }, [selectedModel]);
+  const selected = providerOptions[0]?.vendor ?? vendors.find((v) => v.key === vendor) ?? vendors[0] ?? null;
+
+  useEffect(() => {
+    setCompareState((current) => {
+      const validVendorKeys = current.selectedVendorKeys.filter((key) => vendors.some((v) => v.key === key));
+      const nextKeys = validVendorKeys.length > 0 ? validVendorKeys : DEFAULT_COMPARE_VENDOR_KEYS.filter((key) => vendors.some((v) => v.key === key));
+      const nextPrimary = current.primaryVendor || vendor;
+      const nextModelKey =
+        current.selectedModelKey && comparisonRows.some((row) => row.key === current.selectedModelKey)
+          ? current.selectedModelKey
+          : filteredRows[0]?.key ?? comparisonRows[0]?.key ?? null;
+      if (
+        nextPrimary === current.primaryVendor &&
+        nextModelKey === current.selectedModelKey &&
+        nextKeys.length === current.selectedVendorKeys.length &&
+        nextKeys.every((key, index) => key === current.selectedVendorKeys[index])
+      ) {
+        return current;
+      }
+      return {
+        ...current,
+        primaryVendor: nextPrimary,
+        selectedVendorKeys: nextKeys,
+        selectedModelKey: nextModelKey,
+      };
+    });
+  }, [comparisonRows, filteredRows, setCompareState, vendor, vendors]);
 
   if (!selected) return null;
 
   const sovereign = selected.tier === "A";
-  const selectedStats = selectedVendors.map((v) => ({ vendor: v, stats: vendorStats(v) }));
 
-  const updateFilter = (key: keyof MatrixFilters) => {
-    setMatrixFilters((current) => ({ ...current, [key]: !current[key] }));
+  const updateFilter = (key: keyof CompareMatrixFilters) => {
+    setCompareState((current) => ({
+      ...current,
+      matrixFilters: { ...current.matrixFilters, [key]: !current.matrixFilters[key] },
+    }));
   };
 
-  const syncPrimaryVendor = (keys: ReadonlyArray<string>) => {
-    const nextPrimary = keys.find((key) => key !== AZURE_KEY);
-    if (nextPrimary && nextPrimary !== vendor) setVendor(nextPrimary);
+  const selectModel = (row: ComparisonRow) => {
+    setCompareState((current) => ({ ...current, selectedModelKey: row.key }));
+    const nextVendor = row.bestCell?.vendor.key;
+    if (nextVendor && nextVendor !== vendor) setVendor(nextVendor);
   };
 
-  const toggleVendor = (key: string) => {
-    if (key === AZURE_KEY) return;
-    const selectedNow = activeVendorKeys.includes(key);
-    if (selectedNow) {
-      if (activeVendorKeys.length <= 2) return;
-      const next = activeVendorKeys.filter((item) => item !== key);
-      setSelectedVendorKeys(next);
-      if (key === vendor) syncPrimaryVendor(next);
-      return;
-    }
-    if (activeVendorKeys.length >= MAX_SELECTED_VENDORS) return;
-    const next = [...activeVendorKeys, key];
-    setSelectedVendorKeys(next);
-    setVendor(key);
-  };
-
-  const heading = selected.isCurrent
-    ? "Compare models across EU vendors — Azure stays as baseline"
-    : sovereign
-      ? `Compare ${selected.label} against Azure and sovereign alternatives`
-      : `Compare ${selected.label} against Azure and EU-sovereign alternatives`;
+  const heading = selectedModel
+    ? `Select ${selectedModel.family} by provider, price and latency`
+    : "Select a model first, then choose the provider route";
 
   return (
     <section className="compare-shell">
       <div className="hero-bar">
         <div>
-          <div className="eyebrow">Model-level comparison · baseline: Azure AI Foundry</div>
+          <div className="eyebrow">Model-first routing decision</div>
           <h2>{heading}</h2>
           <p className="insight-summary">
-            {selectedVendors.length} vendors selected · {filteredRows.length} model rows · Azure-only rows
-            {matrixFilters.hideAzureOnly ? ` hidden (${hiddenAzureOnlyCount})` : " visible"}
+            {filteredRows.length} model families match · {providerOptions.length} real provider option{providerOptions.length === 1 ? "" : "s"} for the selected model
+            {matrixFilters.hideAzureOnly ? ` · ${hiddenAzureOnlyCount} Azure-only rows hidden` : ""}
           </p>
         </div>
-      </div>
-
-      <div className="compare-tray">
-        <div className="compare-tray-head">
-          <div>
-            <div className="eyebrow">Vendor compare tray</div>
-            <strong>Choose 2-4 vendors for the matrix</strong>
-          </div>
-          <Badge variant="secondary">{selectedVendors.length}/{MAX_SELECTED_VENDORS} selected</Badge>
-        </div>
-        <div className="vendor-picker compact" role="list" aria-label="Choose platforms to compare">
-          {vendors.map((v) => {
-            const isSel = activeVendorKeys.includes(v.key);
-            const disabled = !isSel && activeVendorKeys.length >= MAX_SELECTED_VENDORS;
-            return (
-              <button
-                key={v.key}
-                type="button"
-                aria-pressed={isSel}
-                aria-disabled={disabled || v.isCurrent}
-                className={`vendor-pick-card${isSel ? " selected" : ""}${v.isCurrent ? " current" : ""}${disabled ? " disabled" : ""}`}
-                onClick={() => toggleVendor(v.key)}
-              >
-                <div className="vendor-pick-head">
-                  <strong>{v.label}</strong>
-                  {isSel && <Check size={14} aria-hidden="true" />}
-                </div>
-                <div className="vendor-pick-meta">
-                  <span className="dot" style={{ background: TIER_COLOR[v.tier] }} />
-                  {v.isCurrent ? "Azure baseline" : v.fit === "sovereign" ? "EU-sovereign" : "EU-residency"}
-                </div>
-                <div className="vendor-pick-count">
-                  {v.coverageRows.length} models{v.benchmarks.length > 0 ? ` · ${v.benchmarks.length} benchmarked` : ""}
-                </div>
-              </button>
-            );
-          })}
-        </div>
-      </div>
-
-      <div className="vendor-summary-strip" aria-label="Selected vendor summary">
-        {selectedStats.map(({ vendor: v, stats: s }) => (
-          <div className="vendor-summary-item" key={v.key}>
-            <span className="dot" style={{ background: TIER_COLOR[v.tier] }} />
-            <strong>{v.label}</strong>
-            <small>
-              {v.isCurrent ? "baseline" : v.fit === "sovereign" ? "sovereign" : "residency"} · {s.modelCount} models
-              {s.cheapest ? ` · ${money(s.cheapest.blended)}/1M` : ""}
-            </small>
-          </div>
-        ))}
       </div>
 
       <Card className="table-card matrix-card">
         <CardHeader className="section-title-row matrix-title-row">
           <div>
-            <div className="eyebrow">Model-level matrix</div>
+            <div className="eyebrow">Choose model</div>
             <CardTitle>
-              {filteredRows.length} comparable model{filteredRows.length === 1 ? "" : "s"} across selected vendors
+              Find the model family first; compare only providers that actually offer it
             </CardTitle>
             {matrixFilters.hideAzureOnly && hiddenAzureOnlyCount > 0 && (
               <div className="matrix-hidden-note">{hiddenAzureOnlyCount} Azure-only rows hidden to keep alternatives visible.</div>
@@ -551,10 +452,10 @@ export function VendorCompare({
               type="text"
               placeholder="Search model or maker..."
               value={modelSearch}
-              onChange={(e) => setModelSearch(e.target.value)}
+              onChange={(e) => setCompareState((current) => ({ ...current, modelSearch: e.target.value }))}
             />
             {modelSearch && (
-              <Button size="icon" variant="ghost" aria-label="Clear search" onClick={() => setModelSearch("")}>
+              <Button size="icon" variant="ghost" aria-label="Clear search" onClick={() => setCompareState((current) => ({ ...current, modelSearch: "" }))}>
                 <X aria-hidden="true" />
               </Button>
             )}
@@ -569,52 +470,108 @@ export function VendorCompare({
           </div>
         </CardHeader>
         <CardContent>
+          <div className="vendor-picker compact" role="list" aria-label="Choose model family">
+            {filteredRows.slice(0, 18).map((row) => (
+              <button
+                key={row.key}
+                type="button"
+                aria-pressed={selectedModel?.key === row.key}
+                className={`vendor-pick-card${selectedModel?.key === row.key ? " selected" : ""}`}
+                onClick={() => selectModel(row)}
+              >
+                <div className="vendor-pick-head">
+                  <strong>{row.family}</strong>
+                  {selectedModel?.key === row.key && <Check size={14} aria-hidden="true" />}
+                </div>
+                <div className="vendor-pick-meta">
+                  <span className="dot" style={{ background: TIER_COLOR[row.bestCell?.tier ?? "C"] }} />
+                  {row.availabilityCount} provider{row.availabilityCount === 1 ? "" : "s"} · best Tier {row.bestCell?.tier ?? "C"}
+                </div>
+                <div className="vendor-pick-count">
+                  {row.bestCell?.bench
+                    ? `${money(row.bestCell.bench.blended)}/1M · ${row.bestCell.bench.ttft.toFixed(2)}s TTFT · ${row.bestCell.bench.throughput} t/s`
+                    : "Catalog availability only"}
+                </div>
+              </button>
+            ))}
+          </div>
+
+          {selectedModel ? (
+            <div className="vendor-summary-strip" aria-label="Selected model summary">
+              <div className="vendor-summary-item">
+                <span className="dot" style={{ background: TIER_COLOR[selectedModel.bestCell?.tier ?? "C"] }} />
+                <strong>{selectedModel.family}</strong>
+                <small>{selectedModel.models.join(", ")}</small>
+              </div>
+              <div className="vendor-summary-item">
+                <strong>{providerOptions.length} provider options</strong>
+                <small>{selectedModel.publishers.join(", ") || "Unknown publisher"}</small>
+              </div>
+              <div className="vendor-summary-item">
+                <strong>{selectedModel.bestCell?.vendor.label ?? "No best fit"}</strong>
+                <small>{selectedModel.bestCell?.bench ? `Benchmark ${selectedModel.bestCell.bench.reliabilityScore}/100` : "No benchmark yet"}</small>
+              </div>
+            </div>
+          ) : null}
+
           <div className="tablewrap compare-tablewrap matrix-tablewrap">
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="matrix-model-head">Model</TableHead>
-                  {selectedVendors.map((v) => (
-                    <TableHead className="matrix-vendor-head" key={v.key}>
-                      <span>{v.label}</span>
-                      {v.isCurrent && <Badge variant="secondary">baseline</Badge>}
-                    </TableHead>
-                  ))}
-                  <TableHead>Best fit</TableHead>
+                  <TableHead>Provider</TableHead>
+                  <TableHead>Availability</TableHead>
+                  <TableHead>Cost</TableHead>
+                  <TableHead>Latency / speed</TableHead>
+                  <TableHead>Benchmark</TableHead>
+                  <TableHead>Fit</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredRows.length === 0 ? (
+                {providerOptions.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={selectedVendors.length + 2}>
-                      <div className="empty-state">No models match these vendor and model filters.</div>
+                    <TableCell colSpan={6}>
+                      <div className="empty-state">No provider options match this model and filter set.</div>
                     </TableCell>
                   </TableRow>
                 ) : (
-                  filteredRows.map((row) => (
-                    <TableRow key={row.key}>
-                      <TableCell className="matrix-model-cell">
-                        <div className="table-model">{row.family}</div>
-                        <div className="note">{row.publishers.join(", ") || "Unknown publisher"}</div>
-                        {row.models.length > 1 && <div className="matrix-variant-note">{row.models.length} variants grouped</div>}
+                  providerOptions.map((cell) => (
+                    <TableRow key={cell.vendor.key}>
+                      <TableCell>
+                        <div className="table-model">{cell.vendor.label}</div>
+                        <div className="note">{cell.vendor.company}</div>
                       </TableCell>
-                      {selectedVendors.map((v) => (
-                        <TableCell className="matrix-vendor-cell" key={v.key}>
-                          <VendorModelCell cell={row.cells[v.key] ?? null} />
-                        </TableCell>
-                      ))}
-                      <TableCell className="matrix-best-cell">
-                        {row.bestCell ? (
-                          <>
-                            <Badge style={{ background: `color-mix(in srgb, ${TIER_COLOR[row.bestCell.tier]} 18%, var(--bg-card))`, color: "var(--ink)" }}>
-                              Tier {row.bestCell.tier}
-                            </Badge>
-                            <strong>{row.bestCell.vendor.label}</strong>
-                            <span>{row.bestCell.bench ? `Reliability ${row.bestCell.bench.reliabilityScore}` : "EU catalog match"}</span>
-                          </>
+                      <TableCell>
+                        <div className="matrix-cell-model">{cell.modelLabel}</div>
+                        <RegionCell regions={cell.regions} />
+                      </TableCell>
+                      <TableCell>
+                        {cell.bench ? <strong>{money(cell.bench.blended)}/1M</strong> : <span className="note">No price benchmark</span>}
+                      </TableCell>
+                      <TableCell>
+                        {cell.bench ? (
+                          <div className="matrix-cell-metrics">
+                            <span>{cell.bench.ttft.toFixed(2)}s TTFT</span>
+                            <span>{cell.bench.throughput} t/s</span>
+                          </div>
                         ) : (
-                          <span className="note">No fit</span>
+                          <span className="note">No latency benchmark</span>
                         )}
+                      </TableCell>
+                      <TableCell>
+                        {cell.bench ? (
+                          <Badge variant="secondary" title={cell.bench.reliabilityNote}>
+                            {cell.bench.reliabilityGrade} · {cell.bench.reliabilityScore}/100
+                          </Badge>
+                        ) : (
+                          <span className="note">Catalog only</span>
+                        )}
+                      </TableCell>
+                      <TableCell className="matrix-best-cell">
+                        <Badge style={{ background: `color-mix(in srgb, ${TIER_COLOR[cell.tier]} 18%, var(--bg-card))`, color: "var(--ink)" }}>
+                          Tier {cell.tier}
+                        </Badge>
+                        <strong>{cell.vendor.fit === "sovereign" ? "EU-sovereign" : cell.vendor.fit === "eu-residency" ? "EU-residency" : "Rejected"}</strong>
+                        <span>{cell.bench ? "Benchmarked route" : "Availability only"}</span>
                       </TableCell>
                     </TableRow>
                   ))
@@ -623,21 +580,19 @@ export function VendorCompare({
             </Table>
           </div>
           <div className="caption">
-            Each row groups the same normalized model across selected vendors. Benchmarked cells show price, speed and
-            reliability; catalog-only cells confirm EU availability but still need pricing verification before production.
+            Select a model first. The provider table only lists real availability for that model family; benchmarked rows
+            show cost, TTFT, throughput and reliability, while catalog-only rows still need pricing and latency verification.
           </div>
         </CardContent>
       </Card>
-
-      {!selected.isCurrent && azureVM && <VsAzure selected={selected} azure={azureVM} />}
 
       <div className={`verdict-panel ${sovereign ? "ok" : "warn"}`} role="note">
         {sovereign ? <ShieldCheck size={20} aria-hidden="true" /> : <ShieldAlert size={20} aria-hidden="true" />}
         <div>
           <strong>
             {sovereign
-              ? `${selected.label} is fully EU-sovereign: EU entity and EU infrastructure — outside CLOUD Act reach.`
-              : `${selected.label} is EU data residency only: prompts stay in EU regions, but the US parent company remains subject to the CLOUD Act.`}
+              ? `${selected.label} is the current best provider option for this model family and is fully EU-sovereign.`
+              : `${selected.label} is the current best provider option for this model family, but it is EU data residency rather than full EU sovereignty.`}
           </strong>
           <div className="note">
             {selected.evidenceNote}{" "}
@@ -672,33 +627,6 @@ function FilterToggle({
   );
 }
 
-function VendorModelCell({ cell }: { readonly cell: ModelCell | null }) {
-  if (!cell) return <span className="matrix-empty">—</span>;
-  const bench = cell.bench;
-  return (
-    <div className={`matrix-cell-stack${bench ? " benchmarked" : ""}`}>
-      <div className="matrix-cell-head">
-        <strong>{bench ? "Benchmarked" : "Available"}</strong>
-        <span className="dot" style={{ background: TIER_COLOR[cell.tier] }} />
-      </div>
-      <div className="matrix-cell-model">{cell.modelLabel}</div>
-      <RegionCell regions={cell.regions} />
-      {bench ? (
-        <div className="matrix-cell-metrics">
-          <span>{money(bench.blended)}/1M</span>
-          <span>{bench.throughput} t/s</span>
-          <span>{bench.ttft.toFixed(2)}s</span>
-          <Badge variant="secondary" title={bench.reliabilityNote}>
-            {bench.reliabilityGrade} · {bench.reliabilityScore}
-          </Badge>
-        </div>
-      ) : (
-        <div className="note">No benchmark yet</div>
-      )}
-    </div>
-  );
-}
-
 function RegionCell({ regions }: { readonly regions: ReadonlyArray<CoverageRegionView> }) {
   if (regions.length === 0) return <span className="region-chip compact">EU vendor-level</span>;
   const shown = regions.slice(0, 4);
@@ -712,98 +640,5 @@ function RegionCell({ regions }: { readonly regions: ReadonlyArray<CoverageRegio
       ))}
       {rest > 0 && <span className="region-chip compact">+{rest}</span>}
     </div>
-  );
-}
-
-function VsAzure({ selected, azure }: { readonly selected: VendorVM; readonly azure: VendorVM }) {
-  const a = vendorStats(selected);
-  const b = vendorStats(azure);
-
-  const rows: ReadonlyArray<{
-    readonly label: string;
-    readonly left: string;
-    readonly right: string;
-    readonly winner: "left" | "right" | null;
-  }> = [
-    {
-      label: "Sovereignty",
-      left: selected.tier === "A" ? "EU-sovereign (Tier A)" : "EU-residency (Tier B)",
-      right: azure.tier === "A" ? "EU-sovereign (Tier A)" : "EU-residency (Tier B)",
-      winner: selected.tier === "A" && azure.tier !== "A" ? "left" : null,
-    },
-    {
-      label: "EU models available",
-      left: String(a.modelCount),
-      right: String(b.modelCount),
-      winner: a.modelCount === b.modelCount ? null : a.modelCount > b.modelCount ? "left" : "right",
-    },
-    {
-      label: "Cheapest benchmarked",
-      left: a.cheapest ? `${money(a.cheapest.blended)}/1M · ${a.cheapest.name.replace(" (reference)", "")}` : "—",
-      right: b.cheapest ? `${money(b.cheapest.blended)}/1M · ${b.cheapest.name.replace(" (reference)", "")}` : "—",
-      winner:
-        a.cheapest && b.cheapest
-          ? a.cheapest.blended === b.cheapest.blended
-            ? null
-            : a.cheapest.blended < b.cheapest.blended
-              ? "left"
-              : "right"
-          : null,
-    },
-    {
-      label: "Fastest benchmarked",
-      left: a.fastest ? `${a.fastest.throughput} t/s · ${a.fastest.name.replace(" (reference)", "")}` : "—",
-      right: b.fastest ? `${b.fastest.throughput} t/s · ${b.fastest.name.replace(" (reference)", "")}` : "—",
-      winner:
-        a.fastest && b.fastest
-          ? a.fastest.throughput === b.fastest.throughput
-            ? null
-            : a.fastest.throughput > b.fastest.throughput
-              ? "left"
-              : "right"
-          : null,
-    },
-    {
-      label: "Best reliability score",
-      left: a.bestReliability !== null ? `${a.bestReliability}/100` : "—",
-      right: b.bestReliability !== null ? `${b.bestReliability}/100` : "—",
-      winner:
-        a.bestReliability !== null && b.bestReliability !== null
-          ? a.bestReliability === b.bestReliability
-            ? null
-            : a.bestReliability > b.bestReliability
-              ? "left"
-              : "right"
-          : null,
-    },
-  ];
-
-  return (
-    <Card className="vs-card">
-      <CardHeader className="section-title-row">
-        <div>
-          <div className="eyebrow">Head to head</div>
-          <CardTitle>
-            {selected.label} vs Azure AI Foundry
-          </CardTitle>
-        </div>
-      </CardHeader>
-      <CardContent>
-        <div className="vs-grid">
-          <div className="vs-row vs-head">
-            <span />
-            <strong>{selected.label}</strong>
-            <strong>Azure AI Foundry (current)</strong>
-          </div>
-          {rows.map((row) => (
-            <div className="vs-row" key={row.label}>
-              <span className="vs-label">{row.label}</span>
-              <span className={row.winner === "left" ? "vs-win" : ""}>{row.left}</span>
-              <span className={row.winner === "right" ? "vs-win" : ""}>{row.right}</span>
-            </div>
-          ))}
-        </div>
-      </CardContent>
-    </Card>
   );
 }

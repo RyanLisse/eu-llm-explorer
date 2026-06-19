@@ -34,6 +34,8 @@ docs/design.md    Blinqx/HippoLine design tokens and interface architecture
 
 The runtime data layer is Turso-first: when `TURSO_DATABASE_URL` is configured, routes and provider coverage are loaded from Turso/libSQL, decoded once (`Schema.decodeUnknown`), scored, and routed through composed `Effect.Service` layers. If Turso env vars are absent or the DB is empty, the app falls back to the curated TypeScript seed data so local builds still work. Filter state uses `@effect-atom/atom-react`.
 
+Agent-native UI and tool parity is tracked in `docs/agent-native-capability-map.md`. The runtime catalog database is intentionally read-only from the app and chat agent; persistent data changes belong in seed or maintenance flows, not browser/API CRUD paths.
+
 ## Reliability score (heuristic)
 
 ```

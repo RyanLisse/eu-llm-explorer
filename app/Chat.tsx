@@ -3,9 +3,21 @@
 import { useChat } from "@ai-sdk/react";
 import { DefaultChatTransport, lastAssistantMessageIsCompleteWithToolCalls, getToolName } from "ai";
 import { useAtomSet, useAtomValue } from "@effect-atom/atom-react";
-import { filterAtom, selectedRouteAtom } from "@/atoms";
+import { activeTabAtom, compareStateAtom, filterAtom, selectedRouteAtom, uiStateAtom } from "@/atoms";
+import { type AppTab, type UiTheme, type WorkspaceContext } from "@/agent/constants";
+import {
+  mergeCompareState,
+  mergeFilterPatch,
+  filterPatchSchema,
+  normalizeComparePatch,
+  openTabInputSchema,
+  selectRouteInputSchema,
+  setCompareStateInputSchema,
+  setUiStateInputSchema,
+} from "@/agent/tools";
+import { getRouteVisibilityCounts } from "@/agent/routeFilters";
 import { useEffect, useRef, useState } from "react";
-import { Send, Sparkles, ChevronRight, RefreshCw, MessageSquare, Terminal } from "lucide-react";
+import { Send, Sparkles, ChevronRight, RefreshCw, MessageSquare, Terminal, PanelsTopLeft } from "lucide-react";
 import type { RouteView } from "@/domain";
 import { Button } from "@/components/ui/button";
 import {
@@ -37,13 +49,28 @@ const starterPrompts = [
 export function Chat({
   routes,
   open,
+  setActiveTab,
+  setChatOpen,
+  setTheme,
+  setVendor,
+  compareVendorKeys,
 }: {
   readonly routes: ReadonlyArray<RouteView>;
   readonly open: boolean;
+  readonly setActiveTab: (tab: AppTab) => void;
+  readonly setChatOpen: (open: boolean) => void;
+  readonly setTheme: (theme: UiTheme) => void;
+  readonly setVendor: (vendor: string) => void;
+  readonly compareVendorKeys: ReadonlyArray<string>;
 }) {
   const filters = useAtomValue(filterAtom);
   const setFilters = useAtomSet(filterAtom);
+  const activeTab = useAtomValue(activeTabAtom);
+  const compareState = useAtomValue(compareStateAtom);
+  const setCompareState = useAtomSet(compareStateAtom);
+  const selectedRouteId = useAtomValue(selectedRouteAtom);
   const setSelectedRoute = useAtomSet(selectedRouteAtom);
+  const uiState = useAtomValue(uiStateAtom);
   const [inputValue, setInputValue] = useState("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -52,27 +79,56 @@ export function Chat({
     sendAutomaticallyWhen: lastAssistantMessageIsCompleteWithToolCalls,
     onToolCall: async ({ toolCall }) => {
       if (toolCall.toolName === "set_filters") {
-        const patch = toolCall.input as any;
-        setFilters((f) => ({
-          ...f,
-          ...patch,
-          tiers: { ...f.tiers, ...(patch.tiers ?? {}) },
-          modes: { ...f.modes, ...(patch.modes ?? {}) },
-          capabilities: { ...f.capabilities, ...(patch.capabilities ?? {}) },
-        }));
+        const parsed = filterPatchSchema.safeParse(toolCall.input);
+        if (parsed.success) setFilters((f) => mergeFilterPatch(f, parsed.data));
         addToolOutput({
           tool: "set_filters",
           toolCallId: toolCall.toolCallId,
-          output: { applied: true },
+          output: { applied: parsed.success },
         });
       } else if (toolCall.toolName === "select_route") {
-        const { routeId } = toolCall.input as { routeId: string };
-        setSelectedRoute(routeId);
+        const parsed = selectRouteInputSchema.safeParse(toolCall.input);
+        const routeId = parsed.success ? parsed.data.routeId : "";
+        const matchedRoute = routes.find((route) => route.id === routeId || route.route === routeId);
+        if (matchedRoute) setSelectedRoute(matchedRoute.id);
         addToolOutput({
           tool: "select_route",
           toolCallId: toolCall.toolCallId,
-          output: { applied: true },
+          output: { applied: Boolean(matchedRoute), routeId: matchedRoute?.id, reason: matchedRoute ? undefined : "Unknown routeId" },
         });
+      } else if (toolCall.toolName === "open_tab") {
+        const parsed = openTabInputSchema.safeParse(toolCall.input);
+        const tab = parsed.success ? parsed.data.tab : null;
+        addToolOutput({
+          tool: "open_tab",
+          toolCallId: toolCall.toolCallId,
+          output: { applied: Boolean(tab) },
+        });
+        if (tab) setActiveTab(tab);
+      } else if (toolCall.toolName === "set_ui_state") {
+        const parsed = setUiStateInputSchema.safeParse(toolCall.input);
+        addToolOutput({
+          tool: "set_ui_state",
+          toolCallId: toolCall.toolCallId,
+          output: { applied: parsed.success },
+        });
+        if (parsed.success) {
+          if (parsed.data.activeTab) setActiveTab(parsed.data.activeTab);
+          if (typeof parsed.data.theme === "string") setTheme(parsed.data.theme);
+          if (typeof parsed.data.chatOpen === "boolean") setChatOpen(parsed.data.chatOpen);
+        }
+      } else if (toolCall.toolName === "set_compare_state") {
+        const parsed = setCompareStateInputSchema.safeParse(toolCall.input);
+        const normalized = parsed.success ? normalizeComparePatch(parsed.data, compareVendorKeys) : null;
+        addToolOutput({
+          tool: "set_compare_state",
+          toolCallId: toolCall.toolCallId,
+          output: { applied: Boolean(normalized?.ok), reason: normalized?.ok === false ? normalized.reason : undefined },
+        });
+        if (normalized?.ok) {
+          setCompareState((current) => mergeCompareState(current, normalized.patch));
+          if (normalized.patch.primaryVendor) setVendor(normalized.patch.primaryVendor);
+        }
       }
     },
   });
@@ -84,16 +140,31 @@ export function Chat({
 
   if (!open) return null;
 
+  const routeVisibilityCounts = getRouteVisibilityCounts(routes, filters);
+  const workspaceContext: WorkspaceContext = {
+    activeTab,
+    chatOpen: uiState.chatOpen,
+    theme: uiState.theme,
+    selectedRouteId,
+    ...routeVisibilityCounts,
+    compareState,
+  };
+
+  const requestBody = {
+    currentFilters: filters,
+    workspaceContext,
+  };
+
   const handleSend = (e: React.FormEvent) => {
     e.preventDefault();
     if (!inputValue.trim() || status === "submitted" || status === "streaming") return;
-    sendMessage({ text: inputValue }, { body: { currentFilters: filters } });
+    sendMessage({ text: inputValue }, { body: requestBody });
     setInputValue("");
   };
 
   const handleStarterPrompt = (prompt: string) => {
     if (status === "submitted" || status === "streaming") return;
-    sendMessage({ text: prompt }, { body: { currentFilters: filters } });
+    sendMessage({ text: prompt }, { body: requestBody });
   };
 
   return (
@@ -200,6 +271,46 @@ export function Chat({
                                 ? `Selected: ${routeName}`
                                 : `Selecting: ${routeName}...`}
                             </span>
+                          </div>
+                        );
+                      }
+
+                      if (toolName === "open_tab") {
+                        const tab = input?.tab;
+                        return (
+                          <div key={partIndex} className="action-chip route-chip-ui">
+                            <PanelsTopLeft size={13} className="chip-icon" />
+                            <span>{state === "output-available" ? `Opened: ${tab}` : `Opening: ${tab}...`}</span>
+                          </div>
+                        );
+                      }
+
+                      if (toolName === "set_ui_state") {
+                        const nextTab = input?.activeTab;
+                        const nextTheme = input?.theme;
+                        const nextPanel = typeof input?.chatOpen === "boolean" ? (input.chatOpen ? "show agent" : "hide agent") : null;
+                        const changes = [nextTab, nextTheme, nextPanel].filter(Boolean).join(", ") || "workspace state";
+                        return (
+                          <div key={partIndex} className="action-chip route-chip-ui">
+                            <RefreshCw size={13} className="chip-icon" />
+                            <span>{state === "output-available" ? `Updated: ${changes}` : `Updating: ${changes}...`}</span>
+                          </div>
+                        );
+                      }
+
+                      if (toolName === "set_compare_state") {
+                        const parts = [
+                          input?.selectedModelKey ? `model ${input.selectedModelKey}` : null,
+                          input?.primaryVendor ? `vendor ${input.primaryVendor}` : null,
+                          input?.modelSearch ? `search "${input.modelSearch}"` : null,
+                          input?.selectedVendorKeys ? `${input.selectedVendorKeys.length} vendors` : null,
+                          input?.matrixFilters ? "matrix filters" : null,
+                        ].filter(Boolean);
+                        const desc = parts.join(", ") || "Compare state";
+                        return (
+                          <div key={partIndex} className="action-chip filter-chip-ui">
+                            <Sparkles size={13} className="chip-icon" />
+                            <span>{state === "output-available" ? `Updated Compare: ${desc}` : `Updating Compare: ${desc}...`}</span>
                           </div>
                         );
                       }

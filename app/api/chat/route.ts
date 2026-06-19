@@ -1,8 +1,30 @@
-import { convertToModelMessages, stepCountIs, streamText, tool, type UIMessage } from "ai";
+import {
+  convertToModelMessages,
+  createUIMessageStream,
+  createUIMessageStreamResponse,
+  stepCountIs,
+  streamText,
+  tool,
+  type UIMessage,
+} from "ai";
 import { createOpenRouter } from "@openrouter/ai-sdk-provider";
-import { z } from "zod";
 import fs from "node:fs";
 import path from "node:path";
+import { INITIAL_FILTERS, type AgentFilterState, type WorkspaceContext } from "@/agent/constants";
+import { validateReadOnlySql } from "@/agent/sql";
+import {
+  DEFAULT_AGENT_CONTEXT,
+  formatDefaultFilters,
+  formatFilterState,
+  formatWorkspaceContext,
+  openTabInputSchema,
+  queryDataInputSchema,
+  resolveSlashCommand,
+  selectRouteInputSchema,
+  setCompareStateInputSchema,
+  setUiStateInputSchema,
+  filterPatchSchema,
+} from "@/agent/tools";
 import { withClient } from "@/turso";
 
 // Load schema at startup
@@ -16,61 +38,68 @@ const openrouter = createOpenRouter({
 
 export const maxDuration = 30; // standard Next.js max duration for serverless API
 
-const INITIAL_FILTERS = {
-  tiers: { A: true, B: true, C: false },
-  modes: { reasoning: true, "non-reasoning": true, configurable: true },
-  capabilities: { vision: false, tools: false, cache: false, think: false, web: false, json: false },
-  makers: {},
-  providers: {},
-  openOnly: false,
-  maxBlended: 8,
-  metric: "throughput",
-  sort: "reliability",
-  minReliability: 0,
-  search: "",
+const getLastUserText = (messages: ReadonlyArray<UIMessage>): string => {
+  for (let index = messages.length - 1; index >= 0; index -= 1) {
+    const message = messages[index];
+    if (message?.role !== "user") continue;
+    return message.parts
+      .filter((part): part is Extract<(typeof message.parts)[number], { type: "text" }> => part.type === "text")
+      .map((part) => part.text)
+      .join("\n");
+  }
+  return "";
+};
+
+const deterministicTextResponse = (messages: UIMessage[], text: string): Response => {
+  const stream = createUIMessageStream({
+    originalMessages: messages,
+    execute: ({ writer }) => {
+      const id = "deterministic-command";
+      writer.write({ type: "text-start", id });
+      writer.write({ type: "text-delta", id, delta: text });
+      writer.write({ type: "text-end", id });
+    },
+  });
+  return createUIMessageStreamResponse({ stream });
 };
 
 export async function POST(req: Request) {
   const body = (await req.json()) as {
     messages: UIMessage[];
-    currentFilters?: typeof INITIAL_FILTERS;
+    currentFilters?: AgentFilterState;
+    workspaceContext?: WorkspaceContext;
   };
   const { messages } = body;
   const currentFilters = body.currentFilters ?? INITIAL_FILTERS;
+  const workspaceContext: WorkspaceContext = {
+    ...DEFAULT_AGENT_CONTEXT,
+    ...(body.workspaceContext ?? {}),
+    compareState: {
+      ...DEFAULT_AGENT_CONTEXT.compareState,
+      ...(body.workspaceContext?.compareState ?? {}),
+      matrixFilters: {
+        ...DEFAULT_AGENT_CONTEXT.compareState.matrixFilters,
+        ...(body.workspaceContext?.compareState?.matrixFilters ?? {}),
+      },
+    },
+  };
 
-  // 1. Format current filter state for system prompt
-  const tiersStr = Object.entries(currentFilters.tiers ?? {})
-    .map(([k, v]) => `${k}=${v}`)
-    .join(" ");
-  const modesStr = Object.entries(currentFilters.modes ?? {})
-    .map(([k, v]) => `${k}=${v}`)
-    .join(" ");
-  const capsStr = Object.entries(currentFilters.capabilities ?? {})
-    .map(([k, v]) => `${k}=${v}`)
-    .join(" ");
+  const slashResponse = resolveSlashCommand(getLastUserText(messages));
+  if (slashResponse) {
+    return deterministicTextResponse(messages, slashResponse.content);
+  }
 
-  const filterStateText = `
-Current Explorer filter state:
-Tiers: ${tiersStr} | Modes: ${modesStr} | Capabilities: ${capsStr}
-maxBlended: $${currentFilters.maxBlended?.toFixed(2) || "8.00"} | minReliability: ${currentFilters.minReliability ?? 0}
-Sort: ${currentFilters.sort || "reliability"} | openOnly: ${currentFilters.openOnly ?? false} | Search: "${currentFilters.search || ""}"
-`;
+  const filterStateText = formatFilterState(currentFilters);
+  const resetText = formatDefaultFilters();
+  const workspaceStateText = formatWorkspaceContext(workspaceContext);
 
-  // 2. Format default/reset instructions
-  const resetText = `
-Default (reset) filter state:
-Tiers: A=true B=true C=false | Modes: reasoning=true non-reasoning=true configurable=true
-Capabilities: all false | openOnly: false | maxBlended: $8.00 | minReliability: 0 | sort: reliability | search: ""
-To reset or match defaults: call set_filters with these exact values.
-`;
-
-  // 3. Complete system prompt
   const systemPrompt = `
 You are an expert EU Sovereign AI Routing Agent assisting users in the EU AI Gateway Explorer.
 Your goal is to help users navigate and explore model routes that comply with European sovereignty requirements.
 
 ${filterStateText}
 ${resetText}
+${workspaceStateText}
 
 ---
 
@@ -95,33 +124,33 @@ Query: SELECT mr.name, mr.tier, pc.platform, pc.requirement_fit FROM model_route
 BEHAVIORAL INSTRUCTIONS:
 - Always explain your intent to the user before calling a tool. Speak in natural language, describing what actions you are about to perform and why.
 - Keep your responses concise and focused on EU AI sovereignty context.
-- After calling set_filters or select_route, confirm what changed and why in your final narration.
+- After calling a UI tool, confirm what changed and why in your final narration.
 - Never write SQL that modifies data. Only SELECT statements are allowed.
 - You can query database content using the query_data tool. Use this to find route details (like id) if you do not know them.
-- If you find a route that answers the user's question, call select_route with its 'route' or 'id' field (called routeId in the tool).
+- If you find a route that answers the user's question, call select_route with the canonical routeId value.
+- Use open_tab for top-level workspace navigation.
+- Use set_compare_state for Compare model selection, provider selection, model search, and matrix filters.
+- Use set_ui_state only for shell state such as active tab, chat panel visibility, or theme.
 - Do not make up routes or filter states. Use the tools.
 `;
 
-  // 4. Stream response
   const result = await streamText({
     model: openrouter("openrouter/free"),
     messages: await convertToModelMessages(messages),
     system: systemPrompt,
     tools: {
       query_data: tool({
-        description: "Execute a read-only SQL SELECT query against TursoDB.",
-        inputSchema: z.object({
-          sql: z.string().describe("A read-only SELECT query"),
-        }),
+        description: "Execute a read-only SQL SELECT query against allowlisted TursoDB catalog tables.",
+        inputSchema: queryDataInputSchema,
         execute: async ({ sql }) => {
-          const trimmed = sql.trim().toUpperCase();
-          if (!trimmed.startsWith("SELECT")) {
-            return "Only SELECT queries are allowed.";
+          const validation = validateReadOnlySql(sql);
+          if (!validation.ok) {
+            return validation.error;
           }
 
           try {
             const rows = await withClient(async (client) => {
-              const res = await client.execute(sql);
+              const res = await client.execute(validation.sql);
               return res.rows.slice(0, 50);
             });
             if (rows === null) {
@@ -135,45 +164,23 @@ BEHAVIORAL INSTRUCTIONS:
       }),
       set_filters: tool({
         description: "Update the Explorer filter state incrementally.",
-        inputSchema: z.object({
-          tiers: z
-            .object({
-              A: z.boolean().optional(),
-              B: z.boolean().optional(),
-              C: z.boolean().optional(),
-            })
-            .optional(),
-          modes: z
-            .object({
-              reasoning: z.boolean().optional(),
-              "non-reasoning": z.boolean().optional(),
-              configurable: z.boolean().optional(),
-            })
-            .optional(),
-          capabilities: z
-            .object({
-              vision: z.boolean().optional(),
-              tools: z.boolean().optional(),
-              cache: z.boolean().optional(),
-              think: z.boolean().optional(),
-              web: z.boolean().optional(),
-              json: z.boolean().optional(),
-            })
-            .optional(),
-          makers: z.record(z.string(), z.boolean()).optional(),
-          providers: z.record(z.string(), z.boolean()).optional(),
-          openOnly: z.boolean().optional(),
-          maxBlended: z.number().min(0.1).max(8).optional(),
-          minReliability: z.number().min(0).max(100).optional(),
-          sort: z.enum(["reliability", "blended", "throughput", "ttft", "tier", "name"]).optional(),
-          search: z.string().optional(),
-        }),
+        inputSchema: filterPatchSchema,
       }),
       select_route: tool({
         description: "Select a specific route to inspect in the detail panel.",
-        inputSchema: z.object({
-          routeId: z.string().describe("The route id field from model_routes"),
-        }),
+        inputSchema: selectRouteInputSchema,
+      }),
+      open_tab: tool({
+        description: "Open one of the top-level workspace tabs.",
+        inputSchema: openTabInputSchema,
+      }),
+      set_ui_state: tool({
+        description: "Update shell-level UI state such as active tab, chat panel visibility, or theme.",
+        inputSchema: setUiStateInputSchema,
+      }),
+      set_compare_state: tool({
+        description: "Update Compare model selection, provider selection, model search, and matrix filters.",
+        inputSchema: setCompareStateInputSchema,
       }),
     },
     stopWhen: stepCountIs(5),
