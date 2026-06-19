@@ -1,20 +1,4 @@
 {
-  "name": "eu-llm-explorer",
-  "version": "1.0.0",
-  "private": true,
-  "description": "EU-sovereign LLM route explorer for general AI workloads — reliability-aware, provider-selectable. Next.js App Router + Effect-TS.",
-  "type": "module",
-  "scripts": {
-    "dev": "next dev",
-    "build": "next build",
-    "start": "next start",
-    "typecheck": "tsc --noEmit",
-    "lint": "next lint",
-    "db:seed": "tsx scripts/seed-turso.ts",
-    "db:schema": "turso db shell eu-llm-explorer < db/schema.sql",
-    "coverage:audit": "tsx scripts/audit-coverage.ts",
-    "coverage:live-audit": "tsx scripts/audit-live-sources.ts"
-  },
   "dependencies": {
     "@ai-sdk/react": "^3.0.201",
     "@base-ui/react": "^1.5.0",
@@ -45,10 +29,29 @@
     "zod": "^4.4.3"
   },
   "devDependencies": {
+    "@biomejs/biome": "^2.4.16",
     "@types/node": "^25.9.2",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
     "playwright": "^1.60.0",
-    "typescript": "^6.0.3"
-  }
+    "typescript": "^6.0.3",
+    "ultracite": "^7.8.3"
+  },
+  "name": "eu-llm-explorer",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "typecheck": "tsc --noEmit",
+    "lint": "biome lint .",
+    "format": "ultracite fix",
+    "db:seed": "tsx scripts/seed-turso.ts",
+    "db:schema": "turso db shell eu-llm-explorer < db/schema.sql",
+    "coverage:audit": "tsx scripts/audit-coverage.ts",
+    "coverage:live-audit": "tsx scripts/audit-live-sources.ts"
+  },
+  "type": "module",
+  "version": "1.0.0",
+  "private": true,
+  "description": "EU-sovereign LLM route explorer for general AI workloads — reliability-aware, provider-selectable. Next.js App Router + Effect-TS."
 }
