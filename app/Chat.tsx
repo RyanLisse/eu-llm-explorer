@@ -8,6 +8,24 @@ import { useEffect, useRef, useState } from "react";
 import { Send, Sparkles, ChevronRight, RefreshCw, MessageSquare, Terminal } from "lucide-react";
 import type { RouteView } from "@/domain";
 import { Button } from "@/components/ui/button";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { MessageResponse } from "@/components/ai-elements/message";
+
+const markdownComponents = {
+  table: Table,
+  thead: TableHeader,
+  tbody: TableBody,
+  tr: TableRow,
+  th: TableHead,
+  td: TableCell,
+};
 
 const starterPrompts = [
   "Show me the safest EU-only route for coding",
@@ -126,7 +144,12 @@ export function Chat({
                     if (part.type === "text") {
                       return (
                         <div key={partIndex} className="message-bubble text-bubble">
-                          {part.text}
+                          <MessageResponse
+                            components={markdownComponents}
+                            isAnimating={status === "streaming"}
+                          >
+                            {part.text}
+                          </MessageResponse>
                         </div>
                       );
                     }
