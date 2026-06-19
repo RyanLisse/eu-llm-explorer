@@ -21,7 +21,7 @@ export function PageShell({ data }: { readonly data: ExplorerData }) {
 
   const rawTab = searchParams.get("tab") || "compare";
   const tabParam = (TABS as ReadonlyArray<string>).includes(rawTab) ? rawTab : "compare";
-  const vendorParam = searchParams.get("vendor") || "AWS Bedrock EU";
+  const vendorParam = searchParams.get("vendor") || "Mistral La Plateforme";
 
   const [activeTab, setActiveTab] = useState(tabParam);
   const [chatOpen, setChatOpen] = useState(false);

@@ -75,10 +75,10 @@ Het licht/donker-thema wordt bepaald door de `dark` class op `<html>`. De initia
 
 ## 5. Interface & Layout Architectuur
 
-De applicatie is gebouwd als een responsieve **Split-Pane Layout** (`app/PageShell.tsx`). Het doel van de app: **EU-platformen vergelijken met de huidige Azure AI Foundry-baseline** — klik op een vendor en zie direct de beschikbare modellen, prijzen, snelheid en het soevereiniteitsoordeel.
+De applicatie is gebouwd als een responsieve **Split-Pane Layout** (`app/PageShell.tsx`). Het doel van de app: **EU-platformen en modellen vergelijken met de huidige Azure AI Foundry-baseline** — kies 2-4 vendors en zie direct welke modellen per vendor beschikbaar, benchmarked en soeverein inzetbaar zijn.
 
 1. **Linker Paneel** — tabs: Compare (default), Advanced, Research
-   * **Compare tab** (`app/VendorCompare.tsx`): vendor-picker met één kaart per platform (Azure AI Foundry gepind als "current"), een soevereiniteitsoordeel (Tier A = volledig EU-soeverein / Tier B = EU-residency met CLOUD Act-exposure), een head-to-head vergelijking versus Azure Foundry (modellen, goedkoopste, snelste, betrouwbaarheid) en de volledige EU-modelcatalogus van het gekozen platform met prijs/snelheid uit de benchmark-set. Vendor-keuze staat in de URL (`?vendor=`).
+   * **Compare tab** (`app/VendorCompare.tsx`): model-first matrix met Azure AI Foundry als compacte baselinekolom, een multi-select vendor tray (2-4 vendors), modelgerichte filters (search, reasoning, open-weight, vision, tools, Tier A en Azure-only verbergen), sticky modelkolom, een “best fit”-kolom en de bestaande head-to-head vergelijking versus Azure Foundry onder de matrix. Vendor-keuze blijft in de URL (`?vendor=`) als primaire vergelijkingsvendor.
    * **Advanced tab** (`app/Explorer.tsx`): de oorspronkelijke filter-explorer — declaratieve heading, insight-summary, presets, scatter-chart en route-tabel.
    * **Research tab**: ResearchBriefing component.
 
