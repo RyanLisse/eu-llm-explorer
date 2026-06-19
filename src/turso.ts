@@ -4,6 +4,7 @@ import type {
   ModelRouteInput,
   ProviderCoverageSummaryView,
   ProviderCoverageView,
+  Capability,
   Tier,
   VendorScopeView,
 } from "@/domain";
@@ -36,11 +37,17 @@ const asString = (row: Row, key: string): string => String(row[key] ?? "");
 const asNumber = (row: Row, key: string): number => Number(row[key] ?? 0);
 const asNullableNumber = (row: Row, key: string): number | null => (row[key] == null ? null : Number(row[key]));
 const asBoolean = (row: Row, key: string): boolean => Number(row[key] ?? 0) === 1;
+const asStringArray = (row: Row, key: string): ReadonlyArray<string> => {
+  const value = row[key];
+  if (typeof value !== "string") return [];
+  const parsed = JSON.parse(value) as unknown;
+  return Array.isArray(parsed) ? parsed.map(String) : [];
+};
 
 export const loadModelRoutesFromTurso = async (): Promise<ReadonlyArray<ModelRouteInput> | null> =>
   withClient(async (client) => {
     const result = await client.execute(`
-      SELECT id, name, maker, route, tier, mode, openness, input_price, output_price, throughput, ttft,
+      SELECT id, name, maker, route, providers_json, capabilities_json, tier, mode, openness, input_price, output_price, throughput, ttft,
              latest, note, sla_pct, observed_uptime, availability_risk, reliability_note
       FROM model_routes
       ORDER BY tier, maker, name
@@ -50,6 +57,8 @@ export const loadModelRoutesFromTurso = async (): Promise<ReadonlyArray<ModelRou
       name: asString(row, "name"),
       maker: asString(row, "maker"),
       route: asString(row, "route"),
+      providers: asStringArray(row, "providers_json"),
+      capabilities: asStringArray(row, "capabilities_json") as ReadonlyArray<Capability>,
       tier: asString(row, "tier") as Tier,
       mode: asString(row, "mode") as ModelRouteInput["mode"],
       openness: asString(row, "openness") as ModelRouteInput["openness"],

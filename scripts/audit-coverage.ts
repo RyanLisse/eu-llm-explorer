@@ -66,6 +66,21 @@ const expectedVendorScopeStatuses = {
   monitor: 2,
 };
 
+const allowedRouteProviders = new Set([
+  "Azure",
+  "AWS Bedrock",
+  "Google Vertex",
+  "Mistral",
+  "OVHcloud",
+  "Scaleway",
+  "STACKIT",
+  "IONOS",
+  "Nebius",
+  "Groq",
+  "Cerebras",
+]);
+const allowedCapabilities = new Set(["vision", "tools", "cache", "think", "web", "json"]);
+
 checks.staticCounts = {
   modelRoutes: CATALOG.length,
   providerCoverageRows: ALL_PROVIDER_EU_COVERAGE.length,
@@ -78,6 +93,16 @@ checks.staticCounts = {
 };
 
 assert(CATALOG.length === 25, `Expected 25 model routes, got ${CATALOG.length}.`);
+for (const route of CATALOG) {
+  assert(route.providers.length > 0, `Route ${route.id} must declare at least one provider.`);
+  assert(route.capabilities.length > 0, `Route ${route.id} must declare at least one capability.`);
+  for (const provider of route.providers) {
+    assert(allowedRouteProviders.has(provider), `Route ${route.id} has unknown provider metadata: ${provider}.`);
+  }
+  for (const capability of route.capabilities) {
+    assert(allowedCapabilities.has(capability), `Route ${route.id} has unknown capability metadata: ${capability}.`);
+  }
+}
 assert(
   ALL_PROVIDER_EU_COVERAGE.length === 406,
   `Expected 406 qualifying provider coverage rows, got ${ALL_PROVIDER_EU_COVERAGE.length}.`,

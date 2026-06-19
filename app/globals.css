@@ -2527,6 +2527,9 @@ tbody tr.selected-row {
 }
 .verdict-panel.warn svg { color: var(--coral); flex-shrink: 0; margin-top: 2px; }
 .verdict-panel .note { margin-top: 4px; }
+.packet-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 12px; }
+.packet-actions button { gap: 6px; }
+.packet-status { font-size: 12px; color: var(--ink-faint); font-weight: 700; }
 .vs-grid {
   display: flex;
   flex-direction: column;

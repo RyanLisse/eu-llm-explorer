@@ -4,6 +4,7 @@ export interface ValidSqlRead {
   readonly ok: true;
   readonly sql: string;
   readonly tables: ReadonlyArray<AllowedSqlTable>;
+  readonly limit: number;
 }
 
 export interface InvalidSqlRead {
@@ -32,6 +33,8 @@ const WRITE_KEYWORDS = [
 ] as const;
 
 const COMMENT_PATTERNS = [/--/, /\/\*/, /\*\//, /(^|\s)#/];
+const MAX_AGENT_SQL_ROWS = 50;
+const LIMIT_PATTERN = /\blimit\s+([^\s,]+)/i;
 const SOURCE_SECTION_PATTERN =
   /\b(?:from|join)\b\s+([\s\S]*?)(?=\b(?:where|group\s+by|order\s+by|having|limit|offset|union|intersect|except|join|on)\b|$)/gi;
 const IDENTIFIER_PATTERN =
@@ -43,7 +46,12 @@ const stripStringLiterals = (sql: string): string =>
 const normalizeIdentifier = (identifier: string): string => {
   const parts = identifier
     .split(".")
-    .map((part) => part.trim().replace(/^["`\[]|["`\]]$/g, ""))
+    .map((part) => {
+      let value = part.trim();
+      if (value.startsWith('"') || value.startsWith("`") || value.startsWith("[")) value = value.slice(1);
+      if (value.endsWith('"') || value.endsWith("`") || value.endsWith("]")) value = value.slice(0, -1);
+      return value;
+    })
     .filter(Boolean);
   return (parts.at(-1) ?? "").toLowerCase();
 };
@@ -107,9 +115,20 @@ export function validateReadOnlySql(sql: string): SqlValidationResult {
     };
   }
 
+  const limitMatch = withoutStrings.match(LIMIT_PATTERN);
+  const limitToken = limitMatch?.[1] ?? null;
+  const limit = limitToken ? Number(limitToken) : MAX_AGENT_SQL_ROWS;
+  if (!Number.isInteger(limit) || limit < 1) {
+    return { ok: false, error: "SQL LIMIT must be a positive integer." };
+  }
+  if (limit > MAX_AGENT_SQL_ROWS) {
+    return { ok: false, error: `SQL LIMIT must be ${MAX_AGENT_SQL_ROWS} rows or fewer.` };
+  }
+
   return {
     ok: true,
-    sql: trimmed,
+    sql: limitMatch ? trimmed : `${trimmed} LIMIT ${MAX_AGENT_SQL_ROWS}`,
     tables: referencedTables as ReadonlyArray<AllowedSqlTable>,
+    limit,
   };
 }

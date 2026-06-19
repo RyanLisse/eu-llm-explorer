@@ -106,6 +106,22 @@ export function Explorer({
     () => Array.from(new Set(routes.flatMap((r) => r.providers))).toSorted(),
     [routes],
   );
+  const providerCounts = useMemo(() => {
+    const counts = new Map<string, number>();
+    for (const route of routes) {
+      for (const provider of route.providers) {
+        counts.set(provider, (counts.get(provider) ?? 0) + 1);
+      }
+    }
+    return counts;
+  }, [routes]);
+  const makerCounts = useMemo(() => {
+    const counts = new Map<string, number>();
+    for (const route of routes) {
+      counts.set(route.maker, (counts.get(route.maker) ?? 0) + 1);
+    }
+    return counts;
+  }, [routes]);
   const activeProviders = useMemo(
     () => Object.entries(filters.providers).filter(([, on]) => on).map(([name]) => name),
     [filters.providers],
@@ -465,7 +481,7 @@ export function Explorer({
                   </Button>
                   {providers.map((k) => {
                     const on = filters.providers[k] === true;
-                    const n = routes.filter((r) => r.providers.includes(k)).length;
+                    const n = providerCounts.get(k) ?? 0;
                     return (
                       <Button
                         key={k}
@@ -490,7 +506,7 @@ export function Explorer({
                 <CollapsibleContent className="chips vendor-list">
                   {makers.map((k) => {
                     const on = filters.makers[k] !== false;
-                    const n = routes.filter((r) => r.maker === k).length;
+                    const n = makerCounts.get(k) ?? 0;
                     return (
                       <Button
                         key={k}

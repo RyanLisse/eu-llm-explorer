@@ -10,11 +10,13 @@
     "start": "next start",
     "test": "node --import tsx --test tests/*.test.ts",
     "typecheck": "tsc --noEmit",
-    "lint": "next lint",
+    "lint": "biome check --javascript-formatter-enabled=false --json-formatter-enabled=false --css-formatter-enabled=false --assist-enabled=false --skip=style --skip=nursery --skip=performance/useTopLevelRegex --skip=complexity/noExcessiveCognitiveComplexity --skip=correctness/useYield src/agent src/chatConfig.ts src/decisionPacket.ts src/data.ts src/domain.ts src/services.ts src/turso.ts tests scripts/audit-coverage.ts scripts/lint-changed.mjs package.json biome.jsonc",
     "db:seed": "tsx scripts/seed-turso.ts",
     "db:schema": "turso db shell eu-llm-explorer < db/schema.sql",
     "coverage:audit": "tsx scripts/audit-coverage.ts",
-    "coverage:live-audit": "tsx scripts/audit-live-sources.ts"
+    "coverage:live-audit": "tsx scripts/audit-live-sources.ts",
+    "check": "ultracite check",
+    "fix": "ultracite fix"
   },
   "dependencies": {
     "@ai-sdk/react": "^3.0.201",
@@ -46,10 +48,12 @@
     "zod": "^4.4.3"
   },
   "devDependencies": {
+    "@biomejs/biome": "^2.4.16",
     "@types/node": "^25.9.2",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
     "playwright": "^1.60.0",
-    "typescript": "^6.0.3"
+    "typescript": "^6.0.3",
+    "ultracite": "^7.8.3"
   }
 }

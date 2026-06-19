@@ -3,6 +3,8 @@ CREATE TABLE IF NOT EXISTS model_routes (
   name TEXT NOT NULL,
   maker TEXT NOT NULL,
   route TEXT NOT NULL,
+  providers_json TEXT NOT NULL DEFAULT '[]',
+  capabilities_json TEXT NOT NULL DEFAULT '[]',
   tier TEXT NOT NULL CHECK (tier IN ('A', 'B', 'C')),
   mode TEXT NOT NULL CHECK (mode IN ('reasoning', 'non-reasoning', 'configurable')),
   openness TEXT NOT NULL CHECK (openness IN ('open-weight', 'open-source', 'proprietary')),

@@ -8,6 +8,7 @@ import { type AppTab, type UiTheme, type WorkspaceContext } from "@/agent/consta
 import {
   mergeCompareState,
   mergeFilterPatch,
+  compareStatePatchToFilterPatch,
   filterPatchSchema,
   normalizeComparePatch,
   openTabInputSchema,
@@ -29,6 +30,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { MessageResponse } from "@/components/ai-elements/message";
+import { CHAT_MODEL_LABEL } from "@/chatConfig";
 
 const markdownComponents = {
   table: Table,
@@ -84,7 +86,7 @@ export function Chat({
         addToolOutput({
           tool: "set_filters",
           toolCallId: toolCall.toolCallId,
-          output: { applied: parsed.success },
+          output: { applied: parsed.success, surface: activeTab === "compare" ? "compare" : "explorer" },
         });
       } else if (toolCall.toolName === "select_route") {
         const parsed = selectRouteInputSchema.safeParse(toolCall.input);
@@ -127,6 +129,7 @@ export function Chat({
         });
         if (normalized?.ok) {
           setCompareState((current) => mergeCompareState(current, normalized.patch));
+          setFilters((current) => mergeFilterPatch(current, compareStatePatchToFilterPatch(normalized.patch)));
           if (normalized.patch.primaryVendor) setVendor(normalized.patch.primaryVendor);
         }
       }
@@ -173,7 +176,7 @@ export function Chat({
         <MessageSquare size={18} className="chat-header-icon" />
         <div>
           <h3>Compliance Agent</h3>
-          <p className="eyebrow">owl-alpha · sovereign routing</p>
+          <p className="eyebrow">{CHAT_MODEL_LABEL} · sovereign routing</p>
         </div>
       </div>
 
@@ -321,18 +324,8 @@ export function Chat({
                         let resultIsError = false;
 
                         if (state === "output-available") {
-                          try {
-                            const parsed = JSON.parse(output as string);
-                            if (typeof parsed === "string" && parsed.startsWith("SQL Error")) {
-                              resultIsError = true;
-                              resultData = parsed;
-                            } else {
-                              resultData = parsed;
-                            }
-                          } catch {
-                            resultData = String(output);
-                            resultIsError = !Array.isArray(resultData);
-                          }
+                          resultData = output;
+                          resultIsError = output?.ok === false;
                         } else if (state === "output-error") {
                           resultIsError = true;
                           resultData = errorText;

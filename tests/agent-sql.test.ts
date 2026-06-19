@@ -22,7 +22,32 @@ test("accepts basic SELECTs against allowed tables", () => {
   if (result.ok) {
     assert.equal(result.sql.startsWith("SELECT"), true);
     assert.deepEqual(result.tables, ["model_routes", "provider_coverage"]);
+    assert.equal(result.limit, 10);
   }
+});
+
+test("adds a hard default limit when SELECT omits LIMIT", () => {
+  const result = validateReadOnlySql("SELECT name FROM model_routes");
+
+  assert.equal(result.ok, true);
+  if (result.ok) {
+    assert.equal(result.sql, "SELECT name FROM model_routes LIMIT 50");
+    assert.equal(result.limit, 50);
+  }
+});
+
+test("rejects SELECT limits above the agent maximum", () => {
+  const result = validateReadOnlySql("SELECT name FROM model_routes LIMIT 500");
+
+  assert.equal(result.ok, false);
+  if (!result.ok) assert.match(result.error, /50 rows or fewer/);
+});
+
+test("rejects non-positive SELECT limits", () => {
+  const result = validateReadOnlySql("SELECT name FROM model_routes LIMIT -1");
+
+  assert.equal(result.ok, false);
+  if (!result.ok) assert.match(result.error, /positive integer/);
 });
 
 test("accepts quoted and schema-qualified allowed table names", () => {

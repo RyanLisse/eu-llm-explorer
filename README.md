@@ -19,6 +19,8 @@ src/domain.ts     Schema + branded types + serializable views (RouteView/ChainVi
 src/errors.ts     Schema.TaggedError (CatalogDecodeError, NoEligibleRouteError)
 src/data.ts       Curated June-2026 seed dataset (decoded at the boundary)
 src/turso.ts      Turso/libSQL data access for route and provider coverage tables
+src/decisionPacket.ts
+                  Pure Markdown/JSON sovereignty decision-packet builder
 db/schema.sql     Turso schema for routes, vendor coverage, regions, and summaries
 scripts/seed-turso.ts
                   Idempotent seed from the curated TypeScript data into Turso
@@ -54,6 +56,9 @@ npm install
 npm run dev        # http://localhost:3000
 npm run typecheck  # tsc --noEmit
 npm run build      # production build; / is dynamic when Turso is configured
+npm test           # node:test unit coverage for agent contracts, SQL guard, catalog metadata, packets
+npm run lint       # scoped Biome lint baseline for agent/data/test code
+npm run check      # full Ultracite audit; currently includes a large existing style baseline
 npm run coverage:audit  # static data + Turso row-count/invariant audit
 npm run coverage:live-audit  # compare AWS/Requesty rows with current live sources
 ```
@@ -79,6 +84,10 @@ npm run coverage:live-audit
 
 `coverage:audit` verifies the curated source data and the seeded Turso tables agree on the catalog, provider coverage, region rows, summaries, vendor-scope statuses, AWS Bedrock EU rows, Requesty EU Router rows, and multi-vendor overlap count.
 `coverage:live-audit` fetches the current AWS Bedrock regional availability table, rendered Requesty EU model library, rendered Nebius Token Factory public catalog, Google Vertex Europe endpoint table, Microsoft Azure Europe Data Zone/Regional tables, Scaleway supported-model table, STACKIT supported shared-model sections, Mistral model/lifecycle tables, OVHcloud catalog cards, and IONOS model hub table, then fails if the curated rows drift from those live sources.
+
+## Decision packets
+
+The Compare view can copy a Markdown sovereignty decision packet or download the same packet as JSON for the currently selected provider option. Packets are generated from already-loaded catalog data; they do not call live vendor APIs and they are not legal advice. Use them as engineering governance artifacts for DPIA, architecture-decision, procurement, or security-review handoff, then re-verify pricing, availability, DPA terms, subprocessor lists, and live source freshness before production commitment.
 
 ## Data sources (captured June 2026)
 

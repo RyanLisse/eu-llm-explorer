@@ -1,16 +1,18 @@
 "use client";
 
-import { useEffect, useMemo, type ReactNode } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { useAtomSet, useAtomValue } from "@effect-atom/atom-react";
-import { Brain, Check, Eye, Search, ShieldAlert, ShieldCheck, SlidersHorizontal, Weight, Wrench, X } from "lucide-react";
+import { Brain, Check, Copy, Download, Eye, Search, ShieldAlert, ShieldCheck, SlidersHorizontal, Weight, Wrench, X } from "lucide-react";
 import {
   AZURE_COMPARE_VENDOR_KEY,
   DEFAULT_COMPARE_VENDOR_KEYS,
   type CompareMatrixFilters,
 } from "@/agent/constants";
-import { compareStateAtom } from "@/atoms";
+import { compareStateAtom, filterAtom } from "@/atoms";
+import { mergeFilterPatch } from "@/agent/tools";
 import type {
   Capability,
+  ChainView,
   CoverageRegionView,
   Mode,
   Openness,
@@ -18,7 +20,9 @@ import type {
   ProviderCoverageView,
   RouteView,
   Tier,
+  VendorScopeView,
 } from "@/domain";
+import { buildVendorDecisionPacket, formatDecisionPacketMarkdown } from "@/decisionPacket";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -326,22 +330,39 @@ const rowMatchesFilters = (row: ComparisonRow, search: string, filters: CompareM
 
 export function VendorCompare({
   routes,
+  chains,
   summaries,
   coverage,
+  vendorScope,
   vendor,
   setVendor,
 }: {
   readonly routes: ReadonlyArray<RouteView>;
+  readonly chains: ReadonlyArray<ChainView>;
   readonly summaries: ReadonlyArray<ProviderCoverageSummaryView>;
   readonly coverage: ReadonlyArray<ProviderCoverageView>;
+  readonly vendorScope: ReadonlyArray<VendorScopeView>;
   readonly vendor: string;
   readonly setVendor: (val: string) => void;
 }) {
   const compareState = useAtomValue(compareStateAtom);
   const setCompareState = useAtomSet(compareStateAtom);
+  const filters = useAtomValue(filterAtom);
+  const setFilters = useAtomSet(filterAtom);
+  const [packetStatus, setPacketStatus] = useState<"idle" | "copied" | "downloaded" | "failed">("idle");
   const vendors = useMemo(() => buildVendors(summaries, coverage, routes), [summaries, coverage, routes]);
-  const modelSearch = compareState.modelSearch;
-  const matrixFilters = compareState.matrixFilters;
+  const modelSearch = filters.search;
+  const matrixFilters: CompareMatrixFilters = useMemo(
+    () => ({
+      reasoning: !filters.modes["non-reasoning"] && (filters.modes.reasoning || filters.modes.configurable),
+      openOnly: filters.openOnly,
+      vision: filters.capabilities.vision,
+      tools: filters.capabilities.tools,
+      sovereignOnly: filters.tiers.A && !filters.tiers.B && !filters.tiers.C,
+      hideAzureOnly: compareState.matrixFilters.hideAzureOnly,
+    }),
+    [compareState.matrixFilters.hideAzureOnly, filters],
+  );
   const comparisonRows = useMemo(() => buildComparisonRows(vendors), [vendors]);
   const hiddenAzureOnlyCount = useMemo(
     () => comparisonRows.filter((row) => row.hasAzure && row.availabilityCount === 1).length,
@@ -374,6 +395,22 @@ export function VendorCompare({
     });
   }, [selectedModel]);
   const selected = providerOptions[0]?.vendor ?? vendors.find((v) => v.key === vendor) ?? vendors[0] ?? null;
+  const selectedPacket = useMemo(
+    () =>
+      selected
+        ? buildVendorDecisionPacket(
+            {
+              routes,
+              providerCoverage: coverage,
+              providerCoverageSummaries: summaries,
+              vendorScope,
+              chains,
+            },
+            selected.key,
+          )
+        : null,
+    [chains, coverage, routes, selected, summaries, vendorScope],
+  );
 
   useEffect(() => {
     setCompareState((current) => {
@@ -406,10 +443,30 @@ export function VendorCompare({
   const sovereign = selected.tier === "A";
 
   const updateFilter = (key: keyof CompareMatrixFilters) => {
-    setCompareState((current) => ({
-      ...current,
-      matrixFilters: { ...current.matrixFilters, [key]: !current.matrixFilters[key] },
-    }));
+    const nextValue = !matrixFilters[key];
+    if (key === "hideAzureOnly") {
+      setCompareState((current) => ({
+        ...current,
+        matrixFilters: { ...current.matrixFilters, hideAzureOnly: nextValue },
+      }));
+      return;
+    }
+    setFilters((current) =>
+      mergeFilterPatch(
+        current,
+        key === "reasoning"
+          ? {
+              modes: nextValue
+                ? { reasoning: true, configurable: true, "non-reasoning": false }
+                : { reasoning: true, configurable: true, "non-reasoning": true },
+            }
+          : key === "openOnly"
+            ? { openOnly: nextValue }
+            : key === "vision" || key === "tools"
+              ? { capabilities: { [key]: nextValue } }
+              : { tiers: nextValue ? { A: true, B: false, C: false } : { A: true, B: true, C: false } },
+      ),
+    );
   };
 
   const selectModel = (row: ComparisonRow) => {
@@ -421,6 +478,28 @@ export function VendorCompare({
   const heading = selectedModel
     ? `Select ${selectedModel.family} by provider, price and latency`
     : "Select a model first, then choose the provider route";
+
+  const copyDecisionPacket = async () => {
+    if (!selectedPacket) return;
+    try {
+      await navigator.clipboard.writeText(formatDecisionPacketMarkdown(selectedPacket));
+      setPacketStatus("copied");
+    } catch {
+      setPacketStatus("failed");
+    }
+  };
+
+  const downloadDecisionPacket = () => {
+    if (!selectedPacket) return;
+    const blob = new Blob([JSON.stringify(selectedPacket, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement("a");
+    anchor.href = url;
+    anchor.download = `${selectedPacket.subject.key.toLowerCase().replace(/[^a-z0-9]+/g, "-")}-decision-packet.json`;
+    anchor.click();
+    URL.revokeObjectURL(url);
+    setPacketStatus("downloaded");
+  };
 
   return (
     <section className="compare-shell">
@@ -452,10 +531,10 @@ export function VendorCompare({
               type="text"
               placeholder="Search model or maker..."
               value={modelSearch}
-              onChange={(e) => setCompareState((current) => ({ ...current, modelSearch: e.target.value }))}
+              onChange={(e) => setFilters((current) => mergeFilterPatch(current, { search: e.target.value }))}
             />
             {modelSearch && (
-              <Button size="icon" variant="ghost" aria-label="Clear search" onClick={() => setCompareState((current) => ({ ...current, modelSearch: "" }))}>
+              <Button size="icon" variant="ghost" aria-label="Clear search" onClick={() => setFilters((current) => mergeFilterPatch(current, { search: "" }))}>
                 <X aria-hidden="true" />
               </Button>
             )}
@@ -600,6 +679,25 @@ export function VendorCompare({
               <a className="source-link" href={selected.source} target="_blank" rel="noreferrer">
                 Source
               </a>
+            )}
+          </div>
+          <div className="packet-actions" aria-label="Decision packet export">
+            <Button type="button" size="sm" variant="outline" onClick={copyDecisionPacket} disabled={!selectedPacket}>
+              <Copy size={14} aria-hidden="true" />
+              Copy decision packet
+            </Button>
+            <Button type="button" size="sm" variant="outline" onClick={downloadDecisionPacket} disabled={!selectedPacket}>
+              <Download size={14} aria-hidden="true" />
+              Download JSON
+            </Button>
+            {packetStatus !== "idle" && (
+              <span className="packet-status">
+                {packetStatus === "copied"
+                  ? "Copied"
+                  : packetStatus === "downloaded"
+                    ? "Downloaded"
+                    : "Clipboard unavailable"}
+              </span>
             )}
           </div>
         </div>

@@ -483,41 +483,6 @@ compareSets("ovhcloudAiEndpoints", parseStaticPlatformRows("OVHcloud AI Endpoint
 const liveIonosRows = await parseIonosLiveRows();
 compareSets("ionosAiModelHub", parseStaticPlatformRows("IONOS AI Model Hub"), liveIonosRows);
 
-const auditOfficialVendorPresence = async () => {
-  const platforms = new Set<string>([]);
-  const rows = OTHER_VENDOR_EU_COVERAGE.filter((row) => platforms.has(row.platform) && row.sourceType === "official");
-  const sourceText = new Map<string, string>();
-
-  for (const source of new Set(rows.map((row) => row.source))) {
-    const response = await fetch(source);
-    if (!response.ok) {
-      failures.push(`Official vendor source ${source} returned HTTP ${response.status}.`);
-      continue;
-    }
-    sourceText.set(source, normalizeModelToken(normalizeSourceText(await response.text())));
-  }
-
-  const byPlatform: Record<string, { staticRows: number; missing: Array<string> }> = {};
-  for (const platform of platforms) {
-    const platformRows = rows.filter((row) => row.platform === platform);
-    const missing = platformRows
-      .filter((row) => !(sourceText.get(row.source) ?? "").includes(normalizeModelToken(row.model)))
-      .map((row) => row.model)
-      .sort();
-
-    byPlatform[platform] = {
-      staticRows: platformRows.length,
-      missing,
-    };
-
-    assert(missing.length === 0, `${platform}: ${missing.length} curated rows are absent from the official source page.`);
-  }
-
-  checks.officialVendorPresence = byPlatform;
-};
-
-await auditOfficialVendorPresence();
-
 if (failures.length > 0) {
   console.error(JSON.stringify({ ok: false, failures, checks }, null, 2));
   process.exit(1);

@@ -52,6 +52,8 @@ export const ModelRoute = Schema.Struct({
   maker: Schema.String,
   /** Human-readable EU host + region, e.g. "OVHcloud AI Endpoints (FR)". */
   route: Schema.String,
+  providers: Schema.Array(Schema.String),
+  capabilities: Schema.Array(Capability),
   tier: Tier,
   mode: Mode,
   openness: Openness,

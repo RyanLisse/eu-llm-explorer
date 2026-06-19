@@ -13,6 +13,8 @@ import {
 } from "./constants";
 
 const booleanPatch = z.boolean().optional();
+const boundedContextText = z.string().max(200);
+const boundedContextKey = z.string().trim().min(1).max(120);
 const hasAtLeastOneField = (value: object): boolean => Object.keys(value).length > 0;
 
 export const queryDataInputSchema = z
@@ -54,19 +56,44 @@ export const filterPatchSchema = z
       })
       .strict()
       .optional(),
-    makers: z.record(z.string(), z.boolean()).optional(),
-    providers: z.record(z.string(), z.boolean()).optional(),
+    makers: z.record(boundedContextKey, z.boolean()).optional(),
+    providers: z.record(boundedContextKey, z.boolean()).optional(),
     openOnly: z.boolean().optional(),
     maxBlended: z.number().min(0.1).max(8).optional(),
     minReliability: z.number().min(0).max(100).optional(),
     metric: z.enum(["throughput", "ttft"]).optional(),
     sort: z.enum(["reliability", "blended", "throughput", "ttft", "tier", "name"]).optional(),
-    search: z.string().optional(),
+    search: boundedContextText.optional(),
   })
   .strict()
   .refine(hasAtLeastOneField, "At least one filter field is required.");
 
 export const setFiltersInputSchema = filterPatchSchema;
+
+export const agentFilterStateSchema = z
+  .object({
+    tiers: z.object({ A: z.boolean(), B: z.boolean(), C: z.boolean() }).strict(),
+    modes: z.object({ reasoning: z.boolean(), "non-reasoning": z.boolean(), configurable: z.boolean() }).strict(),
+    capabilities: z
+      .object({
+        vision: z.boolean(),
+        tools: z.boolean(),
+        cache: z.boolean(),
+        think: z.boolean(),
+        web: z.boolean(),
+        json: z.boolean(),
+      })
+      .strict(),
+    makers: z.record(boundedContextKey, z.boolean()),
+    providers: z.record(boundedContextKey, z.boolean()),
+    openOnly: z.boolean(),
+    maxBlended: z.number().min(0.1).max(8),
+    minReliability: z.number().min(0).max(100),
+    metric: z.enum(["throughput", "ttft"]),
+    sort: z.enum(["reliability", "blended", "throughput", "ttft", "tier", "name"]),
+    search: boundedContextText,
+  })
+  .strict();
 
 export const selectRouteInputSchema = z
   .object({
@@ -102,14 +129,63 @@ export const compareMatrixFiltersPatchSchema = z
 
 export const setCompareStateInputSchema = z
   .object({
-    primaryVendor: z.string().trim().min(1).optional(),
-    selectedVendorKeys: z.array(z.string().trim().min(1)).min(1).max(MAX_COMPARE_VENDORS).optional(),
-    selectedModelKey: z.string().trim().min(1).nullable().optional(),
-    modelSearch: z.string().optional(),
+    primaryVendor: boundedContextKey.optional(),
+    selectedVendorKeys: z.array(boundedContextKey).min(1).max(MAX_COMPARE_VENDORS).optional(),
+    selectedModelKey: boundedContextKey.nullable().optional(),
+    modelSearch: boundedContextText.optional(),
     matrixFilters: compareMatrixFiltersPatchSchema.optional(),
   })
   .strict()
   .refine(hasAtLeastOneField, "At least one compare state field is required.");
+
+export const compareStateSchema = z
+  .object({
+    primaryVendor: boundedContextKey,
+    selectedVendorKeys: z.array(boundedContextKey).min(1).max(MAX_COMPARE_VENDORS),
+    selectedModelKey: boundedContextKey.nullable(),
+    modelSearch: boundedContextText,
+    matrixFilters: z
+      .object({
+        reasoning: z.boolean(),
+        openOnly: z.boolean(),
+        vision: z.boolean(),
+        tools: z.boolean(),
+        sovereignOnly: z.boolean(),
+        hideAzureOnly: z.boolean(),
+      })
+      .strict(),
+  })
+  .strict();
+
+export const workspaceContextSchema = z
+  .object({
+    activeTab: z.enum(APP_TABS),
+    chatOpen: z.boolean(),
+    theme: z.enum(UI_THEMES),
+    selectedRouteId: boundedContextKey.nullable(),
+    routeCount: z.number().int().min(0),
+    visibleRouteCount: z.number().int().min(0),
+    usableRouteCount: z.number().int().min(0),
+    sovereignRouteCount: z.number().int().min(0),
+    compareState: compareStateSchema,
+  })
+  .strict();
+
+export const chatMessageSchema = z
+  .object({
+    id: boundedContextKey,
+    role: z.enum(["user", "assistant"]),
+    parts: z.array(z.object({ type: z.string().max(64) }).passthrough()).min(1).max(64),
+  })
+  .passthrough();
+
+export const chatRequestSchema = z
+  .object({
+    messages: z.array(chatMessageSchema).min(1).max(100),
+    currentFilters: agentFilterStateSchema.optional(),
+    workspaceContext: workspaceContextSchema.optional(),
+  })
+  .strict();
 
 export const agentToolInputSchemas = {
   query_data: queryDataInputSchema,
@@ -179,6 +255,8 @@ export function mergeFilterPatch(current: AgentFilterState, patch: FilterPatch):
     tiers: { ...current.tiers, ...(patch.tiers ?? {}) },
     modes: { ...current.modes, ...(patch.modes ?? {}) },
     capabilities: { ...current.capabilities, ...(patch.capabilities ?? {}) },
+    makers: { ...current.makers, ...(patch.makers ?? {}) },
+    providers: { ...current.providers, ...(patch.providers ?? {}) },
   };
 }
 
@@ -192,6 +270,35 @@ export function mergeCompareState(current: CompareState, patch: SetCompareStateI
       ...(patch.matrixFilters ?? {}),
     },
   };
+}
+
+export function compareStatePatchToFilterPatch(patch: SetCompareStateInput): FilterPatch {
+  const filterPatch: FilterPatch = {};
+  if (typeof patch.modelSearch === "string") {
+    filterPatch.search = patch.modelSearch;
+  }
+  const matrix = patch.matrixFilters;
+  if (!matrix) return filterPatch;
+  if (typeof matrix.reasoning === "boolean") {
+    filterPatch.modes = matrix.reasoning
+      ? { reasoning: true, configurable: true, "non-reasoning": false }
+      : { reasoning: true, configurable: true, "non-reasoning": true };
+  }
+  if (typeof matrix.openOnly === "boolean") {
+    filterPatch.openOnly = matrix.openOnly;
+  }
+  if (typeof matrix.vision === "boolean" || typeof matrix.tools === "boolean") {
+    filterPatch.capabilities = {
+      ...(typeof matrix.vision === "boolean" ? { vision: matrix.vision } : {}),
+      ...(typeof matrix.tools === "boolean" ? { tools: matrix.tools } : {}),
+    };
+  }
+  if (typeof matrix.sovereignOnly === "boolean") {
+    filterPatch.tiers = matrix.sovereignOnly
+      ? { A: true, B: false, C: false }
+      : { A: true, B: true, C: false };
+  }
+  return filterPatch;
 }
 
 export type ComparePatchNormalizationResult =
@@ -249,6 +356,21 @@ export function formatWorkspaceContext(context: WorkspaceContext): string {
     `compare.selectedVendorKeys: ${context.compareState.selectedVendorKeys.join(", ")}`,
     `compare.modelSearch: "${context.compareState.modelSearch}"`,
     `compare.matrixFilters: ${JSON.stringify(context.compareState.matrixFilters)}`,
+  ].join("\n");
+}
+
+export function formatUntrustedContextJson(filters: AgentFilterState, context: WorkspaceContext): string {
+  return [
+    "UNTRUSTED_WORKSPACE_CONTEXT_JSON:",
+    JSON.stringify(
+      {
+        filters,
+        workspace: context,
+      },
+      null,
+      2,
+    ),
+    "END_UNTRUSTED_WORKSPACE_CONTEXT_JSON",
   ].join("\n");
 }
 

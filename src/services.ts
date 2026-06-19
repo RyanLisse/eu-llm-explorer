@@ -18,11 +18,11 @@ import {
 import {
   ModelRoute,
   type ChainView,
+  type FailoverHop,
   type MultiVendorModelView,
   type ProviderCoverageSummaryView,
   type ProviderCoverageView,
   type VendorScopeView,
-  type Capability,
   type FailoverChain,
   type ReliabilityGrade,
   type RouteView,
@@ -35,19 +35,24 @@ import {
 // rather than silently flowing into the UI.
 
 const decodeCatalog = Schema.decodeUnknown(Schema.Array(ModelRoute));
+const describeCatalogLoadFailure = (cause: unknown): string => (cause instanceof Error ? cause.message : String(cause));
 
-const loadCatalogInput = Effect.tryPromise({
-  try: async () => {
+const loadCatalogInput = Effect.tryPromise(
+  async () => {
     if (!hasTursoConfig()) return CATALOG;
     const rows = await loadModelRoutesFromTurso();
     return rows && rows.length > 0 ? rows : CATALOG;
   },
-  catch: (cause) =>
-    new CatalogDecodeError({
-      message: "Turso route catalog failed to load",
-      cause: cause instanceof Error ? cause.message : String(cause),
+).pipe(
+  Effect.catchAll((cause) =>
+    Effect.gen(function* () {
+      yield* Effect.logWarning("Turso route catalog unavailable; using static catalog fallback.", {
+        cause: describeCatalogLoadFailure(cause),
+      });
+      return CATALOG;
     }),
-});
+  ),
+);
 
 export class ModelCatalogService extends Effect.Service<ModelCatalogService>()(
   "ModelCatalogService",
@@ -202,7 +207,7 @@ export class RecommendationService extends Effect.Service<RecommendationService>
         task: string,
       ) =>
         Effect.gen(function* () {
-          const hops = [];
+          const hops: FailoverHop[] = [];
           for (const [id, rationale] of pairs) {
             const found = Option.fromNullable(scored.find((r) => r.id === id));
             const route = yield* Option.match(found, {
@@ -264,81 +269,15 @@ export interface ExplorerData {
 }
 
 // Flatten Effect Option<number> → number | null so the result is JSON-safe.
-const providerTags = (route: string): ReadonlyArray<string> => {
-  const providers = [
-    ["Azure", route.includes("Azure")],
-    ["AWS Bedrock", route.includes("Bedrock") || route.includes("AWS")],
-    ["Google Vertex", route.includes("Vertex")],
-    ["Mistral", route.includes("Mistral")],
-    ["OVHcloud", route.includes("OVH")],
-    ["Scaleway", route.includes("Scaleway")],
-    ["STACKIT", route.includes("STACKIT")],
-    ["IONOS", route.includes("IONOS")],
-    ["Nebius", route.includes("Nebius")],
-    ["Groq", route.includes("Groq")],
-    ["Cerebras", route.includes("Cerebras")],
-  ] as const;
-  const tags = providers.filter(([, on]) => on).map(([name]) => name);
-  return tags.length > 0 ? tags : [route];
-};
-
-const CAPABILITY_ORDER: ReadonlyArray<Capability> = ["vision", "tools", "cache", "think", "web", "json"];
-
-const hasAny = (text: string, terms: ReadonlyArray<string>): boolean => terms.some((term) => text.includes(term));
-
-const derivedCapabilities = (r: ScoredRoute): ReadonlyArray<Capability> => {
-  const text = `${r.id} ${r.name} ${r.maker} ${r.route} ${r.note}`.toLowerCase();
-  const capabilities = new Set<Capability>();
-
-  if (
-    hasAny(text, [
-      "claude",
-      "gemini",
-      "gpt-5",
-      "mistral small 4",
-      "mistral large",
-      "mistral medium",
-      "nova",
-      "pixtral",
-      "vision",
-      "visual",
-      "image",
-      "multimodal",
-      "vl",
-    ])
-  ) {
-    capabilities.add("vision");
-  }
-
-  if (r.mode === "reasoning" || r.mode === "configurable" || hasAny(text, ["reasoning", "thinking", "think"])) {
-    capabilities.add("think");
-  }
-
-  if (!hasAny(text, ["embedding", "transcription", "tts", "image generation only"])) {
-    capabilities.add("tools");
-    capabilities.add("json");
-  }
-
-  if (hasAny(text, ["claude", "anthropic", "gemini", "openai", "gpt", "mistral", "nova"])) {
-    capabilities.add("cache");
-  }
-
-  if (hasAny(text, ["web search", "web-search", "perplexity"])) {
-    capabilities.add("web");
-  }
-
-  return CAPABILITY_ORDER.filter((capability) => capabilities.has(capability));
-};
-
 const toView = (r: ScoredRoute): RouteView => ({
   id: r.id,
   name: r.name,
   maker: r.maker,
-  providers: providerTags(r.route),
+  providers: r.providers,
   route: r.route,
   tier: r.tier,
   mode: r.mode,
-  capabilities: derivedCapabilities(r),
+  capabilities: r.capabilities,
   openness: r.openness,
   inputPrice: r.inputPrice,
   outputPrice: r.outputPrice,
@@ -366,21 +305,22 @@ const chainToView = (c: FailoverChain): ChainView => ({
 const program = Effect.gen(function* () {
   const scored = yield* ReliabilityService.scoredAll();
   const chains = yield* RecommendationService.chains();
-  const providerCoverage =
-    (yield* Effect.tryPromise(() => loadProviderCoverageFromTurso()).pipe(
+  const providerCoverageEffect = Effect.tryPromise(() => loadProviderCoverageFromTurso()).pipe(
       Effect.map((rows) => (rows && rows.length > 0 ? rows : ALL_PROVIDER_EU_COVERAGE)),
       Effect.catchAll(() => Effect.succeed(ALL_PROVIDER_EU_COVERAGE)),
-    ));
-  const providerCoverageSummaries =
-    (yield* Effect.tryPromise(() => loadProviderCoverageSummariesFromTurso()).pipe(
+    );
+  const providerCoverageSummariesEffect = Effect.tryPromise(() => loadProviderCoverageSummariesFromTurso()).pipe(
       Effect.map((rows) => (rows && rows.length > 0 ? rows : PROVIDER_COVERAGE_SUMMARIES)),
       Effect.catchAll(() => Effect.succeed(PROVIDER_COVERAGE_SUMMARIES)),
-    ));
-  const vendorScope =
-    (yield* Effect.tryPromise(() => loadVendorScopeFromTurso()).pipe(
+    );
+  const vendorScopeEffect = Effect.tryPromise(() => loadVendorScopeFromTurso()).pipe(
       Effect.map((rows) => (rows && rows.length > 0 ? rows : VENDOR_SCOPE_AUDIT)),
       Effect.catchAll(() => Effect.succeed(VENDOR_SCOPE_AUDIT)),
-    ));
+    );
+  const [providerCoverage, providerCoverageSummaries, vendorScope] = yield* Effect.all(
+    [providerCoverageEffect, providerCoverageSummariesEffect, vendorScopeEffect] as const,
+    { concurrency: "unbounded" },
+  );
   return {
     routes: scored.map(toView),
     chains: chains.map(chainToView),

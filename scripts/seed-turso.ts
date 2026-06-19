@@ -56,15 +56,17 @@ try {
     await client.execute({
       sql: `
         INSERT INTO model_routes (
-          id, name, maker, route, tier, mode, openness, input_price, output_price, throughput, ttft,
+          id, name, maker, route, providers_json, capabilities_json, tier, mode, openness, input_price, output_price, throughput, ttft,
           latest, note, sla_pct, observed_uptime, availability_risk, reliability_note
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `,
       args: [
         row.id,
         row.name,
         row.maker,
         row.route,
+        JSON.stringify(row.providers),
+        JSON.stringify(row.capabilities),
         row.tier,
         row.mode,
         row.openness,
