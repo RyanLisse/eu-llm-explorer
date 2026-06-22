@@ -17,6 +17,7 @@ export const CATALOG: ReadonlyArray<ModelRouteInput> = [
   // ── Tier A · EU-sovereign (no CLOUD Act reach) ──────────────────────────────
   {
     id: "mistral-small-4",
+    intelligenceIndex: 21,
     name: "Mistral Small 4",
     maker: "Mistral",
     route: "Mistral La Plateforme (FR)",
@@ -39,6 +40,7 @@ export const CATALOG: ReadonlyArray<ModelRouteInput> = [
   },
   {
     id: "mistral-small-3-2",
+    intelligenceIndex: null,
     name: "Mistral Small 3.2",
     maker: "Mistral",
     route: "OVHcloud / Scaleway (FR)",
@@ -59,6 +61,7 @@ export const CATALOG: ReadonlyArray<ModelRouteInput> = [
   },
   {
     id: "ministral-3-8b",
+    intelligenceIndex: 9,
     name: "Ministral 3 8B",
     maker: "Mistral",
     route: "Mistral La Plateforme (FR)",
@@ -79,6 +82,7 @@ export const CATALOG: ReadonlyArray<ModelRouteInput> = [
   },
   {
     id: "ministral-3-3b",
+    intelligenceIndex: 6,
     name: "Ministral 3 3B",
     maker: "Mistral",
     route: "Mistral / OVHcloud (FR)",
@@ -99,6 +103,7 @@ export const CATALOG: ReadonlyArray<ModelRouteInput> = [
   },
   {
     id: "mistral-medium-3-5",
+    intelligenceIndex: 30,
     name: "Mistral Medium 3.5",
     maker: "Mistral",
     route: "Mistral / Scaleway (FR)",
@@ -120,6 +125,7 @@ export const CATALOG: ReadonlyArray<ModelRouteInput> = [
   },
   {
     id: "mistral-large-3",
+    intelligenceIndex: 16,
     name: "Mistral Large 3",
     maker: "Mistral",
     route: "Mistral / Scaleway / Bedrock EU",
@@ -141,6 +147,7 @@ export const CATALOG: ReadonlyArray<ModelRouteInput> = [
   },
   {
     id: "magistral-medium-1-2",
+    intelligenceIndex: 20,
     name: "Magistral Medium 1.2",
     maker: "Mistral",
     route: "Mistral La Plateforme (FR)",
@@ -162,6 +169,7 @@ export const CATALOG: ReadonlyArray<ModelRouteInput> = [
   },
   {
     id: "magistral-small-1-2",
+    intelligenceIndex: 12,
     name: "Magistral Small 1.2",
     maker: "Mistral",
     route: "Mistral / Scaleway (FR)",
@@ -182,6 +190,7 @@ export const CATALOG: ReadonlyArray<ModelRouteInput> = [
   },
   {
     id: "gpt-oss-20b-ovh",
+    intelligenceIndex: 15,
     name: "gpt-oss-20b",
     maker: "OpenAI OSS",
     route: "OVHcloud (FR)",
@@ -202,6 +211,7 @@ export const CATALOG: ReadonlyArray<ModelRouteInput> = [
   },
   {
     id: "gpt-oss-20b-stackit",
+    intelligenceIndex: 15,
     name: "gpt-oss-20b",
     maker: "OpenAI OSS",
     route: "STACKIT AI Model Serving (DE/AT)",
@@ -223,6 +233,7 @@ export const CATALOG: ReadonlyArray<ModelRouteInput> = [
   },
   {
     id: "gpt-oss-120b",
+    intelligenceIndex: 24,
     name: "gpt-oss-120b",
     maker: "OpenAI OSS",
     route: "Scaleway / OVH / STACKIT",
@@ -244,6 +255,7 @@ export const CATALOG: ReadonlyArray<ModelRouteInput> = [
   },
   {
     id: "llama-3-3-70b",
+    intelligenceIndex: 9,
     name: "Llama 3.3 70B",
     maker: "Meta",
     route: "STACKIT / OVH / IONOS",
@@ -264,6 +276,7 @@ export const CATALOG: ReadonlyArray<ModelRouteInput> = [
   },
   {
     id: "qwen3-5-397b",
+    intelligenceIndex: 34,
     name: "Qwen3.5-397B-A17B",
     maker: "Alibaba",
     route: "OVHcloud / Scaleway (FR)",
@@ -285,6 +298,7 @@ export const CATALOG: ReadonlyArray<ModelRouteInput> = [
   },
   {
     id: "deepseek-v3-2",
+    intelligenceIndex: null,
     name: "DeepSeek V3.2",
     maker: "DeepSeek",
     route: "Nebius / Scaleway (EU)",
@@ -308,6 +322,7 @@ export const CATALOG: ReadonlyArray<ModelRouteInput> = [
   // ── Tier B · EU-residency under a US vendor (CLOUD Act exposure) ─────────────
   {
     id: "azure-gpt-5-nano",
+    intelligenceIndex: null,
     name: "gpt-5-nano",
     maker: "OpenAI",
     route: "Azure EU Data Zone (SE)",
@@ -329,6 +344,7 @@ export const CATALOG: ReadonlyArray<ModelRouteInput> = [
   },
   {
     id: "azure-gpt-5-mini",
+    intelligenceIndex: null,
     name: "gpt-5-mini (reference)",
     maker: "OpenAI",
     route: "Azure EU Data Zone (SE)",
@@ -349,6 +365,7 @@ export const CATALOG: ReadonlyArray<ModelRouteInput> = [
   },
   {
     id: "azure-gpt-5-4-nano",
+    intelligenceIndex: 38,
     name: "gpt-5.4-nano",
     maker: "OpenAI",
     route: "Azure EU Data Zone (pending)",
@@ -371,6 +388,7 @@ export const CATALOG: ReadonlyArray<ModelRouteInput> = [
   },
   {
     id: "vertex-gemini-2-5-flash-lite",
+    intelligenceIndex: null,
     name: "Gemini 2.5 Flash-Lite",
     maker: "Google",
     route: "Vertex europe-west4 (NL)",
@@ -391,6 +409,7 @@ export const CATALOG: ReadonlyArray<ModelRouteInput> = [
   },
   {
     id: "vertex-gemini-3-1-flash-lite",
+    intelligenceIndex: 25,
     name: "Gemini 3.1 Flash-Lite",
     maker: "Google",
     route: "Vertex europe-west4 (NL)",
@@ -412,6 +431,7 @@ export const CATALOG: ReadonlyArray<ModelRouteInput> = [
   },
   {
     id: "bedrock-claude-haiku-4-5",
+    intelligenceIndex: 30,
     name: "Claude Haiku 4.5",
     maker: "Anthropic",
     route: "AWS Bedrock EU (Frankfurt)",
@@ -432,6 +452,7 @@ export const CATALOG: ReadonlyArray<ModelRouteInput> = [
   },
   {
     id: "bedrock-claude-sonnet-4-6",
+    intelligenceIndex: 47,
     name: "Claude Sonnet 4.6",
     maker: "Anthropic",
     route: "AWS Bedrock EU / Vertex EU",
@@ -453,6 +474,7 @@ export const CATALOG: ReadonlyArray<ModelRouteInput> = [
   },
   {
     id: "bedrock-nova-lite",
+    intelligenceIndex: null,
     name: "Amazon Nova Lite",
     maker: "Amazon",
     route: "AWS Bedrock EU",
@@ -475,6 +497,7 @@ export const CATALOG: ReadonlyArray<ModelRouteInput> = [
   // ── Tier C · rejected for sensitive workloads (US entity / no hard-EU routing) ──
   {
     id: "groq-llama-3-3-70b",
+    intelligenceIndex: 9,
     name: "Llama 3.3 70B (Groq)",
     maker: "Meta",
     route: "Groq public API",
@@ -495,6 +518,7 @@ export const CATALOG: ReadonlyArray<ModelRouteInput> = [
   },
   {
     id: "groq-llama-3-1-8b",
+    intelligenceIndex: null,
     name: "Llama 3.1 8B (Groq)",
     maker: "Meta",
     route: "Groq public API",
@@ -515,6 +539,7 @@ export const CATALOG: ReadonlyArray<ModelRouteInput> = [
   },
   {
     id: "cerebras-cs3",
+    intelligenceIndex: null,
     name: "Cerebras (CS-3 cloud)",
     maker: "Cerebras",
     route: "Cerebras inference cloud",

@@ -2,7 +2,7 @@ import type { Capability, Mode, Tier } from "../domain";
 
 export const CAPABILITY_KEYS: ReadonlyArray<Capability> = ["vision", "tools", "cache", "think", "web", "json"];
 
-export type RouteSortKey = "reliability" | "blended" | "throughput" | "ttft" | "tier" | "name";
+export type RouteSortKey = "reliability" | "blended" | "throughput" | "ttft" | "intelligence" | "value" | "tier" | "name";
 export type RouteMetricKey = "throughput" | "ttft";
 
 export interface AgentFilterState {
@@ -16,6 +16,8 @@ export interface AgentFilterState {
   readonly metric: RouteMetricKey;
   readonly sort: RouteSortKey;
   readonly minReliability: number;
+  /** Minimum AA Intelligence Index (0–60). 0 = include models without a score. */
+  readonly minIntelligence: number;
   readonly search: string;
 }
 
@@ -30,6 +32,7 @@ export const INITIAL_FILTERS: AgentFilterState = {
   metric: "throughput",
   sort: "reliability",
   minReliability: 0,
+  minIntelligence: 0,
   search: "",
 };
 
@@ -100,7 +103,7 @@ export interface UiState {
 }
 
 export const DEFAULT_UI_STATE: UiState = {
-  activeTab: "compare",
+  activeTab: "explorer",
   chatOpen: false,
   theme: "dark",
 };

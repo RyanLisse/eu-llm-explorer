@@ -12,6 +12,7 @@ CREATE TABLE IF NOT EXISTS model_routes (
   output_price REAL NOT NULL,
   throughput REAL NOT NULL,
   ttft REAL NOT NULL,
+  intelligence_index REAL,
   latest INTEGER NOT NULL DEFAULT 0,
   note TEXT NOT NULL,
   sla_pct REAL,

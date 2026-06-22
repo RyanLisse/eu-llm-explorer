@@ -57,8 +57,8 @@ try {
       sql: `
         INSERT INTO model_routes (
           id, name, maker, route, providers_json, capabilities_json, tier, mode, openness, input_price, output_price, throughput, ttft,
-          latest, note, sla_pct, observed_uptime, availability_risk, reliability_note
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+          intelligence_index, latest, note, sla_pct, observed_uptime, availability_risk, reliability_note
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `,
       args: [
         row.id,
@@ -74,6 +74,7 @@ try {
         row.outputPrice,
         row.throughput,
         row.ttft,
+        row.intelligenceIndex,
         row.latest ? 1 : 0,
         row.note,
         row.slaPct,

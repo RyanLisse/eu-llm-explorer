@@ -64,6 +64,13 @@ export const ModelRoute = Schema.Struct({
   throughput: Schema.Number,
   /** Median time-to-first-token in seconds. */
   ttft: Schema.Number,
+  /**
+   * Artificial Analysis Intelligence Index (v4.1, June 2026) — a normalized
+   * 0–60 quality score across 9 evaluations. None = the model is not on the
+   * current AA leaderboard (typically superseded by a newer version), so no
+   * comparable score is published. Per-host routes inherit the per-model score.
+   */
+  intelligenceIndex: Schema.OptionFromNullOr(Schema.Number),
   latest: Schema.optionalWith(Schema.Boolean, { default: () => false }),
   note: Schema.String,
 
@@ -125,6 +132,8 @@ export interface RouteView {
   readonly outputPrice: number;
   readonly throughput: number;
   readonly ttft: number;
+  /** AA Intelligence Index v4.1 (0–60). null = no current published score. */
+  readonly intelligenceIndex: number | null;
   readonly latest: boolean;
   readonly note: string;
   readonly slaPct: number | null;

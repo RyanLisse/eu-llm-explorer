@@ -61,8 +61,9 @@ export const filterPatchSchema = z
     openOnly: z.boolean().optional(),
     maxBlended: z.number().min(0.1).max(8).optional(),
     minReliability: z.number().min(0).max(100).optional(),
+    minIntelligence: z.number().min(0).max(60).optional(),
     metric: z.enum(["throughput", "ttft"]).optional(),
-    sort: z.enum(["reliability", "blended", "throughput", "ttft", "tier", "name"]).optional(),
+    sort: z.enum(["reliability", "blended", "throughput", "ttft", "intelligence", "value", "tier", "name"]).optional(),
     search: boundedContextText.optional(),
   })
   .strict()
@@ -89,8 +90,9 @@ export const agentFilterStateSchema = z
     openOnly: z.boolean(),
     maxBlended: z.number().min(0.1).max(8),
     minReliability: z.number().min(0).max(100),
+    minIntelligence: z.number().min(0).max(60),
     metric: z.enum(["throughput", "ttft"]),
-    sort: z.enum(["reliability", "blended", "throughput", "ttft", "tier", "name"]),
+    sort: z.enum(["reliability", "blended", "throughput", "ttft", "intelligence", "value", "tier", "name"]),
     search: boundedContextText,
   })
   .strict();

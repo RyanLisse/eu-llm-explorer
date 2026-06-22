@@ -1,7 +1,7 @@
 "use client";
 
 import { useAtomSet, useAtomValue } from "@effect-atom/atom-react";
-import { Brain, RotateCcw, Search, ShieldCheck, SlidersHorizontal, Weight, X, Zap } from "lucide-react";
+import { ArrowLeftRight, Brain, RotateCcw, Search, ShieldCheck, SlidersHorizontal, Weight, X, Zap } from "lucide-react";
 import { useMemo, useState, useEffect, useCallback } from "react";
 import {
   CartesianGrid,
@@ -13,7 +13,17 @@ import {
   ZAxis,
 } from "recharts";
 import { filterAtom, INITIAL_FILTERS, selectedRouteAtom, type FilterState } from "@/atoms";
-import type { Capability, Mode, RouteView, Tier } from "@/domain";
+import type {
+  Capability,
+  ChainView,
+  Mode,
+  ProviderCoverageSummaryView,
+  ProviderCoverageView,
+  RouteView,
+  Tier,
+  VendorScopeView,
+} from "@/domain";
+import { VendorCompare } from "./VendorCompare";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -59,6 +69,70 @@ const RISK_LABEL: Record<string, string> = { low: "low risk", medium: "medium ri
 
 const REF_BLENDED = (0.25 + 2.0) / 2;
 const REF_SPEED = 101;
+const INTEL_SOURCE = "Artificial Analysis Intelligence Index v4.1 · Jun 2026";
+
+/** Intelligence-per-dollar: AA Index points per $1 blended. Higher = better value. */
+const valueScore = (r: RouteView): number => (r.intelligenceIndex ?? 0) / Math.max(r.blended, 0.01);
+
+/**
+ * Per-model verdict: which axes a model wins within the current usable set, and
+ * whether another model beats it on every axis (so it is hard to justify).
+ */
+export interface Verdict {
+  readonly tags: ReadonlyArray<string>;
+  readonly dominated: boolean;
+  readonly dominatedBy: string | null;
+}
+
+const computeVerdicts = (rows: ReadonlyArray<RouteView>): Map<string, Verdict> => {
+  const out = new Map<string, Verdict>();
+  if (rows.length === 0) return out;
+  const withIntel = rows.filter((r) => r.intelligenceIndex !== null);
+  const best = <T,>(list: ReadonlyArray<T>, pick: (x: T) => number): T | null =>
+    list.length === 0 ? null : list.reduce((a, b) => (pick(b) > pick(a) ? b : a));
+  const cheapest = best(rows, (r) => -r.blended);
+  const fastest = best(rows, (r) => r.throughput);
+  const snappiest = best(rows, (r) => -r.ttft);
+  const smartest = best(withIntel, (r) => r.intelligenceIndex ?? 0);
+  const mostReliable = best(rows, (r) => r.reliabilityScore);
+  const bestValue = best(withIntel, (r) => valueScore(r));
+
+  for (const r of rows) {
+    const tags: string[] = [];
+    if (r.id === smartest?.id) tags.push("Smartest");
+    if (r.id === bestValue?.id) tags.push("Best value");
+    if (r.id === cheapest?.id) tags.push("Cheapest");
+    if (r.id === fastest?.id) tags.push("Fastest");
+    if (r.id === snappiest?.id) tags.push("Lowest latency");
+    if (r.id === mostReliable?.id) tags.push("Most reliable");
+
+    // Dominated: another usable route is >= on every axis and strictly better on one.
+    let dominatedBy: string | null = null;
+    for (const o of rows) {
+      if (o.id === r.id) continue;
+      const intelO = o.intelligenceIndex ?? 0;
+      const intelR = r.intelligenceIndex ?? 0;
+      const ge =
+        o.blended <= r.blended &&
+        o.throughput >= r.throughput &&
+        o.ttft <= r.ttft &&
+        o.reliabilityScore >= r.reliabilityScore &&
+        intelO >= intelR;
+      const gt =
+        o.blended < r.blended ||
+        o.throughput > r.throughput ||
+        o.ttft < r.ttft ||
+        o.reliabilityScore > r.reliabilityScore ||
+        intelO > intelR;
+      if (ge && gt) {
+        dominatedBy = o.name.replace(" (reference)", "");
+        break;
+      }
+    }
+    out.set(r.id, { tags, dominated: tags.length === 0 && dominatedBy !== null, dominatedBy });
+  }
+  return out;
+};
 
 const money = (v: number): string => `$${v.toFixed(v < 1 ? 2 : 1)}`;
 const isUrl = (value: string): boolean => value.startsWith("https://") || value.startsWith("http://");
@@ -81,9 +155,22 @@ const chartConfig = {
 
 export function Explorer({
   routes,
+  chains = [],
+  summaries = [],
+  coverage = [],
+  vendorScope = [],
+  vendor,
+  setVendor,
 }: {
   readonly routes: ReadonlyArray<RouteView>;
+  readonly chains?: ReadonlyArray<ChainView>;
+  readonly summaries?: ReadonlyArray<ProviderCoverageSummaryView>;
+  readonly coverage?: ReadonlyArray<ProviderCoverageView>;
+  readonly vendorScope?: ReadonlyArray<VendorScopeView>;
+  readonly vendor?: string;
+  readonly setVendor?: (value: string) => void;
 }) {
+  const [vendorCompareOpen, setVendorCompareOpen] = useState(false);
   const filters = useAtomValue(filterAtom);
   const setFilters = useAtomSet(filterAtom);
   const selectedId = useAtomValue(selectedRouteAtom);
@@ -144,6 +231,7 @@ export function Explorer({
       if (filters.openOnly && r.openness === "proprietary") return false;
       if (r.blended > filters.maxBlended) return false;
       if (r.reliabilityScore < filters.minReliability) return false;
+      if (filters.minIntelligence > 0 && (r.intelligenceIndex ?? -1) < filters.minIntelligence) return false;
       if (
         q &&
         !r.name.toLowerCase().includes(q) &&
@@ -167,6 +255,10 @@ export function Explorer({
           return b.throughput - a.throughput || a.ttft - b.ttft;
         case "ttft":
           return a.ttft - b.ttft || b.throughput - a.throughput;
+        case "intelligence":
+          return (b.intelligenceIndex ?? -1) - (a.intelligenceIndex ?? -1) || b.reliabilityScore - a.reliabilityScore;
+        case "value":
+          return valueScore(b) - valueScore(a) || b.reliabilityScore - a.reliabilityScore;
         case "tier":
           return tierOrder[a.tier] - tierOrder[b.tier] || b.reliabilityScore - a.reliabilityScore;
         default:
@@ -181,6 +273,21 @@ export function Explorer({
   const selected = visible.find((r) => r.id === selectedId) ?? ranked[0] ?? nonRejected[0] ?? visible[0] ?? null;
   const cheapest = nonRejected.toSorted((a, b) => a.blended - b.blended)[0] ?? null;
   const fastest = nonRejected.toSorted((a, b) => b.throughput - a.throughput)[0] ?? null;
+  const azureBaseline = useMemo(
+    () =>
+      routes.find((r) => r.id === "azure-gpt-5-mini") ??
+      routes.find((r) => r.providers.includes("Azure")) ??
+      null,
+    [routes],
+  );
+  const verdicts = useMemo(() => computeVerdicts(nonRejected), [nonRejected]);
+  const smartest = useMemo(
+    () =>
+      nonRejected
+        .filter((r) => r.intelligenceIndex !== null)
+        .toSorted((a, b) => (b.intelligenceIndex ?? 0) - (a.intelligenceIndex ?? 0))[0] ?? null,
+    [nonRejected],
+  );
   const bestReliability = sovereign.length > 0
     ? Math.max(...sovereign.map((r) => r.reliabilityScore))
     : nonRejected.length > 0 ? Math.max(...nonRejected.map((r) => r.reliabilityScore)) : null;
@@ -225,7 +332,21 @@ export function Explorer({
     patch({ providers: { ...filters.providers, [k]: true } });
   };
 
-  const applyPreset = (preset: "default" | "sovereign" | "open" | "reasoning" | "all") => {
+  const applyPreset = (preset: "default" | "sovereign" | "open" | "reasoning" | "azure" | "all") => {
+    if (preset === "azure") {
+      // Sovereign alternatives that are no more expensive than the Azure (SE) baseline,
+      // ranked by intelligence-per-dollar.
+      patch({
+        tiers: { A: true, B: true, C: false },
+        modes: { reasoning: true, "non-reasoning": true, configurable: true },
+        openOnly: false,
+        minReliability: 0,
+        minIntelligence: 0,
+        maxBlended: azureBaseline ? Math.max(azureBaseline.blended, 0.2) : 8,
+        sort: "value",
+      });
+      return;
+    }
     if (preset === "default") {
       setFilters(() => INITIAL_FILTERS);
       return;
@@ -301,6 +422,12 @@ export function Explorer({
             <Brain aria-hidden="true" />
             Reasoning
           </Button>
+          {azureBaseline && (
+            <Button variant="outline" onClick={() => applyPreset("azure")}>
+              <ArrowLeftRight aria-hidden="true" />
+              Beat Azure (SE)
+            </Button>
+          )}
           <Button variant="ghost" onClick={() => applyPreset("default")} aria-label="Reset filters">
             <RotateCcw aria-hidden="true" />
           </Button>
@@ -311,6 +438,11 @@ export function Explorer({
         <MetricCard label="Routes shown" value={visible.length.toString()} detail={`${nonRejected.length} usable for sensitive workloads`} />
         <MetricCard label="Sovereign matches" value={sovereign.length.toString()} detail="Tier A routes in current filters" />
         <MetricCard label="Avg reliability" value={averageReliability ? averageReliability.toString() : "-"} detail="Visible non-rejected routes" />
+        <MetricCard
+          label="Smartest visible"
+          value={smartest?.intelligenceIndex != null ? `${smartest.intelligenceIndex}` : "-"}
+          detail={smartest ? `${smartest.name.replace(" (reference)", "")} · AA Index` : "No scored model"}
+        />
         <MetricCard label="Fastest visible" value={fastest ? `${fastest.throughput} t/s` : "-"} detail={fastest?.name ?? "No route"} />
       </div>
 
@@ -452,12 +584,29 @@ export function Explorer({
               </div>
 
               <div className="control-block">
+                <div className="slider-label">
+                  <span>Min intelligence</span>
+                  <strong>{filters.minIntelligence === 0 ? "Any" : filters.minIntelligence}</strong>
+                </div>
+                <Slider
+                  min={0}
+                  max={50}
+                  step={5}
+                  value={filters.minIntelligence}
+                  onValueChange={(value) => patch({ minIntelligence: sliderNumber(value, filters.minIntelligence) })}
+                />
+                <div className="note">{INTEL_SOURCE} · above 0 hides unscored models</div>
+              </div>
+
+              <div className="control-block">
                 <label className="lbl">Sort table</label>
                 <Select value={filters.sort} onValueChange={(value) => patch({ sort: value as FilterState["sort"] })}>
                   <SelectTrigger>
                     <SelectValue placeholder="Sort routes" />
                   </SelectTrigger>
                   <SelectContent>
+                    <SelectItem value="intelligence">Smartest first (AA Index)</SelectItem>
+                    <SelectItem value="value">Best value (Index per $)</SelectItem>
                     <SelectItem value="reliability">Most reliable first</SelectItem>
                     <SelectItem value="blended">Cheapest first</SelectItem>
                     <SelectItem value="throughput">Fastest throughput</SelectItem>
@@ -549,7 +698,14 @@ export function Explorer({
                   <div className="empty-state">No sovereign routes match these filters.</div>
                 ) : (
                   ranked.map((r, index) => (
-                    <RouteCard key={r.id} route={r} rank={index + 1} selected={selected?.id === r.id} onSelect={setSelectedId} />
+                    <RouteCard
+                      key={r.id}
+                      route={r}
+                      rank={index + 1}
+                      selected={selected?.id === r.id}
+                      onSelect={setSelectedId}
+                      verdict={verdicts.get(r.id) ?? null}
+                    />
                   ))
                 )}
               </div>
@@ -570,7 +726,7 @@ export function Explorer({
               </CardContent>
             </Card>
 
-            <RouteDetail route={selected} />
+            <RouteDetail route={selected} verdict={selected ? verdicts.get(selected.id) ?? null : null} baseline={azureBaseline} />
           </div>
 
           <Card className="table-card">
@@ -582,7 +738,7 @@ export function Explorer({
               <Badge variant="secondary">{visible.length} rows</Badge>
             </CardHeader>
             <CardContent>
-              <RouteTable rows={visible} selectedId={selected?.id ?? null} onSelect={setSelectedId} />
+              <RouteTable rows={visible} selectedId={selected?.id ?? null} onSelect={setSelectedId} verdicts={verdicts} />
               <div className="caption">
                 {visible.length} routes shown ({nonRejected.length} usable for sensitive workloads). Tier C is hidden by
                 default. Prices mix USD/EUR as published; verify official pricing before production.
@@ -591,6 +747,32 @@ export function Explorer({
           </Card>
         </div>
       </div>
+
+      {vendor && setVendor && summaries.length > 0 && (
+        <Collapsible open={vendorCompareOpen} onOpenChange={setVendorCompareOpen} className="vendor-compare-section">
+          <CollapsibleTrigger className="vendor-compare-trigger">
+            <span>
+              <ArrowLeftRight aria-hidden="true" /> Compare vendors side-by-side
+            </span>
+            <Badge variant="secondary">{vendorCompareOpen ? "Hide" : "Show"}</Badge>
+          </CollapsibleTrigger>
+          <CollapsibleContent>
+            <p className="note vendor-compare-hint">
+              Per-model selection above is the fast path. Use this only when you need to see which platforms host the same
+              model family and how their sovereignty tier, price and SLA differ.
+            </p>
+            <VendorCompare
+              routes={routes}
+              chains={chains}
+              summaries={summaries}
+              coverage={coverage}
+              vendorScope={vendorScope}
+              vendor={vendor}
+              setVendor={setVendor}
+            />
+          </CollapsibleContent>
+        </Collapsible>
+      )}
     </section>
   );
 }
@@ -629,16 +811,55 @@ function CapabilityBadges({ capabilities }: { readonly capabilities: ReadonlyArr
   );
 }
 
+function IntelBadge({ value }: { readonly value: number | null }) {
+  if (value === null) {
+    return (
+      <span className="intel-badge intel-na" title={`No current score on the ${INTEL_SOURCE}`}>
+        AI · n/a
+      </span>
+    );
+  }
+  const tone = value >= 40 ? "high" : value >= 25 ? "mid" : "low";
+  return (
+    <span className={`intel-badge intel-${tone}`} title={INTEL_SOURCE}>
+      AI Index {value}
+    </span>
+  );
+}
+
+function VerdictTags({ verdict }: { readonly verdict: Verdict | null }) {
+  if (!verdict) return null;
+  if (verdict.tags.length === 0 && verdict.dominated) {
+    return (
+      <span className="verdict-tag verdict-dominated" title={`Beaten on every axis by ${verdict.dominatedBy}`}>
+        ↓ beaten by {verdict.dominatedBy}
+      </span>
+    );
+  }
+  if (verdict.tags.length === 0) return <span className="note">—</span>;
+  return (
+    <span className="verdict-tags">
+      {verdict.tags.map((tag) => (
+        <span className="verdict-tag verdict-win" key={tag}>
+          ★ {tag}
+        </span>
+      ))}
+    </span>
+  );
+}
+
 function RouteCard({
   route,
   rank,
   selected,
   onSelect,
+  verdict,
 }: {
   readonly route: RouteView;
   readonly rank: number;
   readonly selected: boolean;
   readonly onSelect: (id: string) => void;
+  readonly verdict: Verdict | null;
 }) {
   const faster = route.throughput > REF_SPEED;
   const cheaper = route.blended < REF_BLENDED;
@@ -649,6 +870,7 @@ function RouteCard({
         <Badge style={{ background: `color-mix(in srgb, ${TIER_META[route.tier].color} 18%, white)`, color: "var(--core)" }}>
           Tier {route.tier}
         </Badge>
+        <IntelBadge value={route.intelligenceIndex} />
       </div>
       <div className="route-title">
         {route.name.replace(" (reference)", "")}
@@ -662,6 +884,11 @@ function RouteCard({
         </span>
         <span>{route.ttft.toFixed(2)}s TTFT</span>
       </div>
+      {verdict && (verdict.tags.length > 0 || verdict.dominated) && (
+        <div className="route-verdict">
+          <VerdictTags verdict={verdict} />
+        </div>
+      )}
       <CapabilityBadges capabilities={route.capabilities} />
       <div className="reliability-bar" aria-label={`Reliability ${route.reliabilityScore}`}>
         <span style={{ width: `${route.reliabilityScore}%`, background: GRADE_COLOR[route.reliabilityGrade] }} />
@@ -673,7 +900,48 @@ function RouteCard({
   );
 }
 
-function RouteDetail({ route }: { readonly route: RouteView | null }) {
+function BaselineCompare({ route, baseline }: { readonly route: RouteView; readonly baseline: RouteView }) {
+  const pricePct = baseline.blended > 0 ? Math.round(((route.blended - baseline.blended) / baseline.blended) * 100) : 0;
+  const speedDelta = route.throughput - baseline.throughput;
+  const ttftDelta = route.ttft - baseline.ttft;
+  const relDelta = route.reliabilityScore - baseline.reliabilityScore;
+  const intelDelta =
+    route.intelligenceIndex !== null && baseline.intelligenceIndex !== null
+      ? route.intelligenceIndex - baseline.intelligenceIndex
+      : null;
+  const row = (label: string, text: string, good: boolean | null) => (
+    <div className="baseline-row">
+      <span>{label}</span>
+      <strong className={good === null ? "" : good ? "delta-good" : "delta-bad"}>{text}</strong>
+    </div>
+  );
+  return (
+    <div className="baseline-compare">
+      <div className="lbl">vs your Azure baseline · {baseline.name.replace(" (reference)", "")} (SE)</div>
+      <div className="baseline-grid">
+        {row("Price", `${pricePct === 0 ? "same" : pricePct < 0 ? `${Math.abs(pricePct)}% cheaper` : `${pricePct}% pricier`}`, pricePct === 0 ? null : pricePct < 0)}
+        {row("Throughput", `${speedDelta >= 0 ? "+" : ""}${speedDelta} t/s`, speedDelta === 0 ? null : speedDelta > 0)}
+        {row("TTFT", `${ttftDelta >= 0 ? "+" : ""}${ttftDelta.toFixed(2)}s`, ttftDelta === 0 ? null : ttftDelta < 0)}
+        {row("Reliability", `${relDelta >= 0 ? "+" : ""}${relDelta}`, relDelta === 0 ? null : relDelta > 0)}
+        {row(
+          "Intelligence",
+          intelDelta === null ? "n/a (no AA score)" : `${intelDelta >= 0 ? "+" : ""}${intelDelta} index`,
+          intelDelta === null ? null : intelDelta >= 0,
+        )}
+      </div>
+    </div>
+  );
+}
+
+function RouteDetail({
+  route,
+  verdict,
+  baseline,
+}: {
+  readonly route: RouteView | null;
+  readonly verdict: Verdict | null;
+  readonly baseline: RouteView | null;
+}) {
   if (!route) {
     return (
       <Card className="detail-panel">
@@ -728,10 +996,38 @@ function RouteDetail({ route }: { readonly route: RouteView | null }) {
             <dd>{route.throughput} tokens/sec · {route.ttft.toFixed(2)}s TTFT</dd>
           </div>
           <div>
+            <dt>Intelligence</dt>
+            <dd>
+              {route.intelligenceIndex !== null ? (
+                <>
+                  {route.intelligenceIndex} AA Index · {valueScore(route).toFixed(1)} pts/$ value
+                </>
+              ) : (
+                "No current AA score (superseded model)"
+              )}
+            </dd>
+          </div>
+          <div>
             <dt>SLA</dt>
             <dd>{route.slaPct !== null ? `${route.slaPct}%` : "No public SLA"} · {RISK_LABEL[route.availabilityRisk]}</dd>
           </div>
         </dl>
+        {baseline && baseline.id !== route.id && <BaselineCompare route={route} baseline={baseline} />}
+        {verdict && (verdict.tags.length > 0 || verdict.dominated) && (
+          <div className="detail-verdict">
+            <div className="lbl">Where it stands</div>
+            {verdict.tags.length > 0 ? (
+              <p>
+                Best-in-set for <strong>{verdict.tags.join(", ").toLowerCase()}</strong> among the models you have filtered to.
+              </p>
+            ) : (
+              <p>
+                {verdict.dominatedBy} beats this route on price, speed, latency, reliability and intelligence at once — hard to
+                justify unless you need its specific provider or sovereignty tier.
+              </p>
+            )}
+          </div>
+        )}
         <div className="detail-note">{route.reliabilityNote}</div>
       </CardContent>
     </Card>
@@ -742,10 +1038,12 @@ function RouteTable({
   rows,
   selectedId,
   onSelect,
+  verdicts,
 }: {
   readonly rows: ReadonlyArray<RouteView>;
   readonly selectedId: string | null;
   readonly onSelect: (id: string) => void;
+  readonly verdicts: Map<string, Verdict>;
 }) {
   return (
     <div className="tablewrap">
@@ -753,6 +1051,8 @@ function RouteTable({
         <TableHeader>
           <TableRow>
             <TableHead>Model</TableHead>
+            <TableHead>Best for</TableHead>
+            <TableHead className="num" title={INTEL_SOURCE}>AI Index</TableHead>
             <TableHead>Provider</TableHead>
             <TableHead>EU route</TableHead>
             <TableHead>Capabilities</TableHead>
@@ -786,6 +1086,12 @@ function RouteTable({
                   <div className="note">
                     {r.maker} · {r.note}
                   </div>
+                </TableCell>
+                <TableCell className="verdict-cell">
+                  <VerdictTags verdict={verdicts.get(r.id) ?? null} />
+                </TableCell>
+                <TableCell className="num">
+                  <IntelBadge value={r.intelligenceIndex} />
                 </TableCell>
                 <TableCell>{r.providers.join(", ")}</TableCell>
                 <TableCell>{r.route}</TableCell>
@@ -926,6 +1232,8 @@ function RouteTooltip({ active, payload }: { readonly active?: boolean; readonly
         <strong>{money(route.blended)}/1M</strong>
         <span>Speed</span>
         <strong>{route.throughput} t/s · {route.ttft.toFixed(2)}s TTFT</strong>
+        <span>Intelligence</span>
+        <strong>{route.intelligenceIndex !== null ? `${route.intelligenceIndex} AA Index` : "n/a"}</strong>
         <span>Reliability</span>
         <strong>{route.reliabilityGrade} · {route.reliabilityScore}</strong>
       </div>

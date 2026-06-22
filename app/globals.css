@@ -2834,3 +2834,89 @@ tbody tr.selected-row {
   .book-page { padding: 28px 18px; }
   .book-controls { flex-direction: column; align-items: stretch; }
 }
+
+/* ── Intelligence / benchmark badges ─────────────────── */
+.intel-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 7px;
+  border-radius: 999px;
+  font-family: var(--font-data);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+  border: 1px solid var(--line);
+}
+.intel-high { background: color-mix(in srgb, var(--growth) 20%, var(--bg-card)); color: color-mix(in srgb, var(--growth) 80%, var(--ink)); border-color: color-mix(in srgb, var(--growth) 45%, transparent); }
+.intel-mid  { background: color-mix(in srgb, var(--sky) 20%, var(--bg-card)); color: color-mix(in srgb, var(--sky) 85%, var(--ink)); border-color: color-mix(in srgb, var(--sky) 45%, transparent); }
+.intel-low  { background: color-mix(in srgb, var(--ray) 24%, var(--bg-card)); color: color-mix(in srgb, var(--ink) 80%, var(--ray)); border-color: color-mix(in srgb, var(--ray) 55%, transparent); }
+.intel-na   { background: transparent; color: var(--ink-faint); border-style: dashed; }
+
+/* ── Verdict tags (best for / dominated) ─────────────── */
+.verdict-tags { display: inline-flex; flex-wrap: wrap; gap: 4px; }
+.verdict-tag {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 7px;
+  border-radius: 6px;
+  font-size: 10.5px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.verdict-win { background: color-mix(in srgb, var(--growth) 16%, var(--bg-card)); color: color-mix(in srgb, var(--growth) 80%, var(--ink)); }
+.verdict-dominated { background: color-mix(in srgb, var(--coral) 14%, var(--bg-card)); color: color-mix(in srgb, var(--coral) 82%, var(--ink)); }
+.route-verdict { margin: -2px 0 2px; }
+.verdict-cell { min-width: 130px; }
+
+/* ── Detail verdict + Azure baseline compare ─────────── */
+.detail-verdict {
+  margin-top: 12px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--accent, var(--sky)) 8%, var(--bg-card));
+  border: 1px solid var(--line);
+}
+.detail-verdict p { margin: 4px 0 0; font-size: 12.5px; line-height: 1.5; }
+.baseline-compare {
+  margin-top: 12px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: 1px dashed color-mix(in srgb, var(--ink) 22%, transparent);
+  background: color-mix(in srgb, var(--ink) 4%, var(--bg-card));
+}
+.baseline-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 16px; margin-top: 8px; }
+.baseline-row { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; font-size: 12px; }
+.baseline-row span { color: var(--ink-faint); }
+.baseline-row strong { font-family: var(--font-data); font-weight: 700; }
+.delta-good { color: var(--growth); }
+.delta-bad { color: var(--coral); }
+
+/* ── Embedded vendor comparison section ──────────────── */
+.vendor-compare-section { margin-top: 18px; }
+.vendor-compare-trigger {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  gap: 10px;
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--bg-card);
+  font-weight: 700;
+  font-size: 13px;
+  cursor: pointer;
+}
+.vendor-compare-trigger:hover { border-color: var(--line-accent); }
+.vendor-compare-trigger span { display: inline-flex; align-items: center; gap: 8px; }
+.vendor-compare-trigger svg { width: 15px; height: 15px; }
+.vendor-compare-hint { margin: 10px 2px 14px; max-width: 70ch; }
+
+@media (max-width: 720px) {
+  .baseline-grid { grid-template-columns: 1fr; }
+  .verdict-cell { min-width: 0; }
+  .hero-actions { flex-wrap: wrap; }
+  .hero-actions [data-slot="button"] { flex: 1 1 auto; }
+}

@@ -32,6 +32,7 @@ export function getVisibleRoutes(
     if (filters.openOnly && route.openness === "proprietary") return false;
     if (route.blended > filters.maxBlended) return false;
     if (route.reliabilityScore < filters.minReliability) return false;
+    if (filters.minIntelligence > 0 && (route.intelligenceIndex ?? -1) < filters.minIntelligence) return false;
     if (
       q &&
       !route.name.toLowerCase().includes(q) &&
@@ -56,6 +57,13 @@ export function getVisibleRoutes(
         return b.throughput - a.throughput || a.ttft - b.ttft;
       case "ttft":
         return a.ttft - b.ttft || b.throughput - a.throughput;
+      case "intelligence":
+        return (b.intelligenceIndex ?? -1) - (a.intelligenceIndex ?? -1) || b.reliabilityScore - a.reliabilityScore;
+      case "value":
+        return (
+          (b.intelligenceIndex ?? 0) / Math.max(b.blended, 0.01) - (a.intelligenceIndex ?? 0) / Math.max(a.blended, 0.01) ||
+          b.reliabilityScore - a.reliabilityScore
+        );
       case "tier":
         return tierOrder[a.tier] - tierOrder[b.tier] || b.reliabilityScore - a.reliabilityScore;
       default:

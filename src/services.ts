@@ -283,6 +283,7 @@ const toView = (r: ScoredRoute): RouteView => ({
   outputPrice: r.outputPrice,
   throughput: r.throughput,
   ttft: r.ttft,
+  intelligenceIndex: Option.getOrNull(r.intelligenceIndex),
   latest: r.latest,
   note: r.note,
   slaPct: Option.getOrNull(r.slaPct),

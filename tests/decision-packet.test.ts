@@ -16,6 +16,7 @@ const route = {
   outputPrice: 1.5,
   throughput: 206,
   ttft: 1.1,
+  intelligenceIndex: 16,
   latest: true,
   note: "Frontier-class route.",
   slaPct: 99.9,

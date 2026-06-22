@@ -7,11 +7,10 @@ import type { ExplorerData } from "@/services";
 import { APP_TABS, AZURE_COMPARE_VENDOR_KEY, DEFAULT_COMPARE_STATE, type AppTab, type UiTheme } from "@/agent/constants";
 import { activeTabAtom, compareStateAtom, uiStateAtom } from "@/atoms";
 import { Explorer } from "./Explorer";
-import { VendorCompare } from "./VendorCompare";
 import { Chat } from "./Chat";
 import { AgentPresentation } from "./AgentPresentation";
 import { ResearchBook } from "./ResearchBook";
-import { MessageSquare, SlidersHorizontal, ArrowLeftRight, BookOpen, Sun, Moon, Presentation } from "lucide-react";
+import { MessageSquare, SlidersHorizontal, BookOpen, Sun, Moon, Presentation } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
@@ -20,8 +19,10 @@ export function PageShell({ data }: { readonly data: ExplorerData }) {
   const router = useRouter();
   const pathname = usePathname();
 
-  const rawTab = searchParams.get("tab") || "compare";
-  const tabParam = (APP_TABS as ReadonlyArray<string>).includes(rawTab) ? (rawTab as AppTab) : "compare";
+  const rawTab = searchParams.get("tab") || "explorer";
+  const requestedTab = (APP_TABS as ReadonlyArray<string>).includes(rawTab) ? (rawTab as AppTab) : "explorer";
+  // "compare" is merged into the model-first explorer; alias legacy links/agent calls.
+  const tabParam: AppTab = requestedTab === "compare" ? "explorer" : requestedTab;
   const vendorParam = searchParams.get("vendor") || "Mistral La Plateforme";
 
   const activeTab = useAtomValue(activeTabAtom);
@@ -87,10 +88,12 @@ export function PageShell({ data }: { readonly data: ExplorerData }) {
   }, [normalizedVendorParam, pathname, router, searchParams, setCompareState, vendorParam]);
 
   const handleTabChange = (tab: AppTab) => {
-    setActiveTab(tab);
-    setUiState((current) => ({ ...current, activeTab: tab }));
+    // "compare" is merged into the model-first explorer.
+    const resolved: AppTab = tab === "compare" ? "explorer" : tab;
+    setActiveTab(resolved);
+    setUiState((current) => ({ ...current, activeTab: resolved }));
     const params = new URLSearchParams(searchParams.toString());
-    params.set("tab", tab);
+    params.set("tab", resolved);
     router.replace(`${pathname}?${params.toString()}`);
   };
 
@@ -142,17 +145,13 @@ export function PageShell({ data }: { readonly data: ExplorerData }) {
           <Tabs value={activeTab} onValueChange={(value) => handleTabChange(value as AppTab)} className="main-tabs">
             <div className="main-tabs-bar">
               <TabsList>
-                <TabsTrigger value="compare" onClick={() => handleTabChange("compare")}>
-                  <ArrowLeftRight size={13} aria-hidden="true" />
-                  Compare
+                <TabsTrigger value="explorer" onClick={() => handleTabChange("explorer")}>
+                  <SlidersHorizontal size={13} aria-hidden="true" />
+                  Models
                 </TabsTrigger>
                 <TabsTrigger value="presentation" onClick={() => handleTabChange("presentation")}>
                   <Presentation size={13} aria-hidden="true" />
                   Presentation
-                </TabsTrigger>
-                <TabsTrigger value="explorer" onClick={() => handleTabChange("explorer")}>
-                  <SlidersHorizontal size={13} aria-hidden="true" />
-                  Advanced
                 </TabsTrigger>
                 <TabsTrigger value="research" onClick={() => handleTabChange("research")}>
                   <BookOpen size={13} aria-hidden="true" />
@@ -161,10 +160,10 @@ export function PageShell({ data }: { readonly data: ExplorerData }) {
               </TabsList>
             </div>
 
-            <div className="main-tab-panel" hidden={activeTab !== "compare"}>
-              {activeTab === "compare" ? (
+            <div className="main-tab-panel" hidden={activeTab !== "explorer"}>
+              {activeTab === "explorer" ? (
                 <div className="wrap">
-                  <VendorCompare
+                  <Explorer
                     routes={data.routes}
                     chains={data.chains}
                     summaries={data.providerCoverageSummaries}
@@ -181,14 +180,6 @@ export function PageShell({ data }: { readonly data: ExplorerData }) {
               {activeTab === "presentation" ? (
                 <div className="wrap presentation-wrap">
                   <AgentPresentation />
-                </div>
-              ) : null}
-            </div>
-
-            <div className="main-tab-panel" hidden={activeTab !== "explorer"}>
-              {activeTab === "explorer" ? (
-                <div className="wrap">
-                  <Explorer routes={data.routes} />
                 </div>
               ) : null}
             </div>
