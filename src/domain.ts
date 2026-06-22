@@ -72,6 +72,16 @@ export const ModelRoute = Schema.Struct({
   observedUptime: Schema.OptionFromNullOr(Schema.Number),
   availabilityRisk: AvailabilityRisk,
   reliabilityNote: Schema.String,
+
+  // Public benchmark dimension
+  /** Artificial Analysis Intelligence Index or equivalent. None = unmeasured. */
+  intelligenceIndex: Schema.OptionFromNullOr(Schema.Number),
+  /** Coding/SWE composite score. None = unmeasured. */
+  codingIndex: Schema.OptionFromNullOr(Schema.Number),
+  /** GPQA Diamond percentage or equivalent reasoning benchmark. None = unmeasured. */
+  reasoningScore: Schema.OptionFromNullOr(Schema.Number),
+  /** Short public citation/URL for benchmark fields. Empty when no score is present. */
+  benchmarkSource: Schema.String,
 });
 export type ModelRoute = Schema.Schema.Type<typeof ModelRoute>;
 
@@ -129,6 +139,10 @@ export interface RouteView {
   readonly observedUptime: number | null;
   readonly availabilityRisk: AvailabilityRisk;
   readonly reliabilityNote: string;
+  readonly intelligenceIndex: number | null;
+  readonly codingIndex: number | null;
+  readonly reasoningScore: number | null;
+  readonly benchmarkSource: string;
   readonly reliabilityScore: number;
   readonly reliabilityGrade: ReliabilityGrade;
   readonly blended: number;

@@ -127,8 +127,6 @@ export function PageShell({ data }: { readonly data: ExplorerData }) {
                 <div className="wrap">
                   <VendorCompare
                     routes={data.routes}
-                    summaries={data.providerCoverageSummaries}
-                    coverage={data.providerCoverage}
                     vendor={vendor}
                     setVendor={setVendor}
                   />

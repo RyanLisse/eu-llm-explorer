@@ -87,7 +87,7 @@ npm run coverage:live-audit
 - Mistral reliability: status.mistral.ai + third-party monitors (≈79% 90-day observed → "medium" availability risk, mitigated by sovereign failover).
 - Pricing / benchmarks: vendor pricing pages + Artificial Analysis (median TTFT/throughput). **Verify on the official pricing page before committing.**
 
-Current seeded provider-coverage matrix: **406 qualifying rows** across **11 provider summaries**, including **74 AWS Bedrock EU rows** and **121 Requesty EU Router rows** from `https://www.requesty.ai/models?region=eu`. Requesty rows qualify only when using `https://router.eu.requesty.ai/v1` with approved EU-region upstream models. Every covered provider row is checked against a current official or rendered-live source; Mistral rows exclude already-retired lifecycle entries.
+Current seeded provider-coverage matrix: **419 qualifying rows** across **11 provider summaries**, including **77 AWS Bedrock EU rows** and **135 Requesty EU Router rows** from `https://www.requesty.ai/models?region=eu`. Requesty rows qualify only when using `https://router.eu.requesty.ai/v1` with approved EU-region upstream models. Every covered provider row is checked against a current official or rendered-live source; Mistral rows exclude already-retired lifecycle entries.
 
 The app also carries a separate **vendor scope audit** so "all vendors" is reviewable without mixing rejected routes into the qualifying-model count:
 

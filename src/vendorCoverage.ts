@@ -70,6 +70,9 @@ DeepSeek|DeepSeek-V3.1|eu-north-1:I,eu-west-2:I
 Google|Gemma 3 27B PT|eu-south-1:I,eu-west-1:I,eu-west-2:I
 Google|Gemma 3 12B IT|eu-south-1:I,eu-west-1:I,eu-west-2:I
 Google|Gemma 3 4B IT|eu-south-1:I,eu-west-1:I,eu-west-2:I
+Google|Gemma 4 26B-A4B|eu-central-1:I
+Google|Gemma 4 31B|eu-central-1:I
+Google|Gemma 4 E2B|eu-central-1:I
 Meta|Llama 3 70B Instruct|eu-west-2:I
 Meta|Llama 3 8B Instruct|eu-west-2:I
 Meta|Llama 3.2 3B Instruct|eu-central-1:G~2026-07-07,eu-west-1:G~2026-07-07,eu-west-3:G~2026-07-07
@@ -193,6 +196,7 @@ minimax-m2.5|bedrock|eu-north-1
 minimax-m2.5|bedrock|eu-south-1
 minimax-m2.5|bedrock|eu-west-1
 minimax-m2.5|bedrock|eu-central-1
+claude-fable-5|bedrock|eu-west-1
 claude-opus-4-8|bedrock|eu-west-3
 claude-opus-4-8|bedrock|eu-north-1
 claude-opus-4-8|bedrock|eu-west-1
@@ -219,6 +223,7 @@ mistral-small-2603|mistral|eu
 mistral-small-latest|mistral|eu
 gpt-oss-120b|nebius|eu
 deepseek-ai/DeepSeek-V3.2|nebius|eu
+deepseek-ai/deepseek-v4-pro|nebius|eu
 claude-sonnet-4-6|bedrock|eu-north-1
 claude-sonnet-4-6|bedrock|eu-west-1
 claude-sonnet-4-6|bedrock|eu-west-3
@@ -307,6 +312,18 @@ devstral-small-2507|mistral|eu
 mistral-medium-latest|mistral|eu
 pixtral-large-latest|mistral|eu
 meta-llama/Llama-3.3-70B-Instruct|nebius|eu
+gemma-3-27b-it|nebius|eu
+glm-5.2|nebius|eu
+minimaxi/minimax-m2.5|nebius|eu
+moonshotai/kimi-k2.6|nebius|eu
+qwen/qwen3.5-397b-a17b|nebius|eu
+nousresearch/hermes-4-70b|nebius|eu
+nvidia/nemotron-3-super-120b-a12b|nebius|eu
+nvidia/nemotron-3-ultra-550b-a55b|nebius|eu
+qwen/qwen3-235b-a22b-instruct-2507|nebius|eu
+qwen/qwen3-30b-a3b-instruct-2507|nebius|eu
+qwen/qwen3-32b|nebius|eu
+qwen/qwen3-next-80b-a3b-thinking|nebius|eu
 mistral-large-latest|mistral|eu
 open-mistral-7b|mistral|eu
 mistral-small-2503|mistral|eu
@@ -514,7 +531,7 @@ export const VENDOR_SCOPE_AUDIT: ReadonlyArray<VendorScopeView> = [
     tier: "B",
     status: "covered-with-conditions",
     category: "eu-router",
-    modelCoverage: "The live EU-filtered Requesty model library is seeded as 121 router rows.",
+    modelCoverage: "The live EU-filtered Requesty model library is seeded as 135 router rows.",
     sourceType: "official",
     source: REQUESTY_MODELS_SOURCE,
     evidenceNote: "Use router.eu.requesty.ai/v1 and approve EU-only upstream models; router location alone is not enough.",
@@ -660,21 +677,16 @@ export const OTHER_VENDOR_EU_COVERAGE: ReadonlyArray<ProviderCoverageView> = [
     [
       "Mistral Large 3",
       "Mistral Medium 3.5",
-      "Mistral Medium 3",
-      "Mistral Medium 3.1",
       "Mistral Small 4",
       "Mistral Small 3.2",
       "Ministral 3 3B",
       "Ministral 3 8B",
       "Ministral 3 14B",
-      "Magistral Medium 1.2",
       "Magistral Small 1.2",
       "Devstral 2",
       "Codestral",
       "Codestral Embed",
-      "Leanstral",
       "OCR 3",
-      "Mistral Nemo 12B",
       "Mistral Embed",
       "Voxtral Mini Transcribe 2",
       "Voxtral Small",
@@ -748,7 +760,6 @@ export const OTHER_VENDOR_EU_COVERAGE: ReadonlyArray<ProviderCoverageView> = [
       "Qwen3-Coder-30B-A3B-Instruct",
       "gpt-oss-20b",
       "gpt-oss-120b",
-      "Qwen3-32B",
       "Mistral-Small-3.2-24B-Instruct-2506",
       "Mistral-7B-Instruct-v0.3",
       "Meta-Llama-3_3-70B-Instruct",
@@ -807,9 +818,11 @@ export const OTHER_VENDOR_EU_COVERAGE: ReadonlyArray<ProviderCoverageView> = [
   ),
   ...nebiusRows([
     { provider: "NVIDIA", model: "Cosmos3-Super-Reasoner", region: "eu-north1" },
-    { provider: "openbmb", model: "openbmb/MiniCPM-V-4_5", region: "eu-north1" },
+    { provider: "OpenBMB", model: "openbmb/MiniCPM-V-4_5", region: "eu-north1" },
     { provider: "NVIDIA", model: "Nemotron-3-Nano-Omni", region: "eu-north1" },
+    { provider: "NVIDIA", model: "nemotron-3-nano-omni-m", region: "eu-north1" },
     { provider: "Z.ai", model: "GLM-5.1", region: "eu-north1" },
+    { provider: "Z.ai", model: "GLM-5.2", region: "eu-north1" },
     { provider: "NousResearch", model: "Hermes-4-405B", region: "eu-north1" },
     { provider: "NousResearch", model: "Hermes-4-70B", region: "eu-north1" },
     { provider: "OpenAI", model: "gpt-oss-120b", region: "eu-north1" },
@@ -821,6 +834,7 @@ export const OTHER_VENDOR_EU_COVERAGE: ReadonlyArray<ProviderCoverageView> = [
     { provider: "Qwen", model: "Qwen3-32B", region: "eu-north1" },
     { provider: "Google", model: "Gemma-3-27b-it", region: "eu-north1" },
     { provider: "NVIDIA", model: "Llama-3_1-Nemotron-Ultra-253B-v1", region: "eu-north1" },
+    { provider: "NVIDIA", model: "llama-3-1-nemotron-ultra-253b-v1-m", region: "eu-north1" },
     { provider: "NVIDIA", model: "Nemotron-3-Nano-30B-A3B", region: "eu-north1" },
     { provider: "Qwen", model: "Qwen2.5-VL-72B-Instruct", region: "eu-north1" },
     { provider: "Meta", model: "Llama-3.3-70B-Instruct", region: "eu-north1" },
@@ -841,7 +855,6 @@ export const OTHER_VENDOR_EU_COVERAGE: ReadonlyArray<ProviderCoverageView> = [
     "Gemini 2.5 Flash",
     "Gemini 2.5 Flash-Lite",
     "Gemini 2.5 Flash with Gemini Live API native audio",
-    "Gemini 2.0 Flash with Gemini Live API preview",
     "Gemini Embedding 2",
     "Gemini Embedding",
     "Embeddings for Text",
