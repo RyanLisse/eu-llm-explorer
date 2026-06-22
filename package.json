@@ -8,15 +8,18 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "test": "node --import tsx --test tests/*.test.ts",
+    "test": "node --import tsx --test tests/agent-*.test.ts tests/catalog-metadata.test.ts tests/decision-packet.test.ts && vitest run tests/api/chat-route.test.ts tests/catalog-benchmarks.test.ts tests/vendorCoverage.test.ts",
     "typecheck": "tsc --noEmit",
-    "lint": "biome check --javascript-formatter-enabled=false --json-formatter-enabled=false --css-formatter-enabled=false --assist-enabled=false --skip=style --skip=nursery --skip=performance/useTopLevelRegex --skip=complexity/noExcessiveCognitiveComplexity --skip=correctness/useYield src/agent src/chatConfig.ts src/decisionPacket.ts src/data.ts src/domain.ts src/services.ts src/turso.ts tests scripts/audit-coverage.ts scripts/lint-changed.mjs package.json biome.jsonc",
+    "lint": "biome lint .",
+    "format": "ultracite fix",
     "db:seed": "tsx scripts/seed-turso.ts",
     "db:schema": "turso db shell eu-llm-explorer < db/schema.sql",
     "coverage:audit": "tsx scripts/audit-coverage.ts",
     "coverage:live-audit": "tsx scripts/audit-live-sources.ts",
     "check": "ultracite check",
-    "fix": "ultracite fix"
+    "fix": "ultracite fix",
+    "test:watch": "vitest",
+    "test:e2e": "playwright test"
   },
   "dependencies": {
     "@ai-sdk/react": "^3.0.201",
@@ -54,6 +57,7 @@
     "@types/react-dom": "^19.0.0",
     "playwright": "^1.60.0",
     "typescript": "^6.0.3",
-    "ultracite": "^7.8.3"
+    "ultracite": "^7.8.3",
+    "vitest": "^4.1.9"
   }
 }

@@ -18,7 +18,6 @@ exclude_patterns = [
   "*-min.*",
   "*.min.*",
   "**/.yarn/**",
-  "**/.next/**",
   "**/*.d.ts",
   "**/assets/**",
   "**/bower_components/**",
@@ -28,7 +27,6 @@ exclude_patterns = [
   "**/db/**",
   "**/deps/**",
   "**/dist/**",
-  "**/coverage/**",
   "**/extern/**",
   "**/external/**",
   "**/generated/**",
@@ -42,6 +40,11 @@ exclude_patterns = [
   "**/templates/**",
   "**/testdata/**",
   "**/vendor/**",
+  "**/.next/**",
+  "**/coverage/**",
+  "**/out/**",
+  "**/playwright-report/**",
+  "**/test-results/**",
 ]
 
 test_patterns = [
@@ -62,6 +65,10 @@ mode = "comment"
 name = "default"
 default = true
 
+
+# biome plugin intentionally not enabled here: linting runs via `npm run lint`
+# (Ultracite/Biome) as the single canonical path. Avoids duplicate/contradictory
+# rules and the qlty<->biome output parse error seen on init.
 
 [[plugin]]
 name = "hadolint"

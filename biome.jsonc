@@ -4,5 +4,77 @@
     "ultracite/biome/core",
     "ultracite/biome/next",
     "ultracite/biome/react"
-  ]
+  ],
+  // Adoption baseline (Plan 001). Ultracite's preset is strict-by-default and the
+  // existing tree predates it (~573 linter findings on first run). Rather than do a
+  // broad source rewrite, the noisy pre-existing rules are relaxed here so
+  // `npm run lint` is a green, meaningful gate for NEW code. "off" = pure cosmetic,
+  // "warn" = real signal kept visible and tracked for follow-up cleanup (promote
+  // back to "error" as the backlog is burned down). The formatter is intentionally
+  // not part of `npm run lint`; run `npm run format` to apply it.
+  "linter": {
+    "rules": {
+      "style": {
+        "useBlockStatements": "off",
+        "useConsistentArrayType": "off",
+        "useTemplate": "off",
+        "useImportType": "off",
+        "useConsistentTypeDefinitions": "off",
+        "useExponentiationOperator": "off",
+        "useNumberNamespace": "off",
+        "useFilenamingConvention": "off",
+        "useAtIndex": "off",
+        "noNestedTernary": "off",
+        "noNegationElse": "off",
+        "noUnusedTemplateLiteral": "off",
+        "noDescendingSpecificity": "off",
+        "noNonNullAssertion": "warn",
+        "noParameterAssign": "warn",
+        "noExportedImports": "warn"
+      },
+      "complexity": {
+        "useArrowFunction": "off",
+        "useSimplifiedLogicExpression": "off",
+        "noUselessUndefined": "off",
+        "noForEach": "warn",
+        "noExcessiveCognitiveComplexity": "warn"
+      },
+      "nursery": {
+        "useSortedClasses": "off"
+      },
+      "suspicious": {
+        "noVar": "warn",
+        "noArrayIndexKey": "warn",
+        "noExplicitAny": "warn",
+        "noAssignInExpressions": "warn",
+        "useStrictMode": "warn",
+        "useGuardForIn": "warn",
+        "useAwait": "warn",
+        "noEvolvingTypes": "warn"
+      },
+      "performance": {
+        "useTopLevelRegex": "warn",
+        "noNamespaceImport": "warn",
+        "noImgElement": "warn"
+      },
+      "security": {
+        "noDangerouslySetInnerHtml": "warn"
+      },
+      "correctness": {
+        "useYield": "warn",
+        "useImageSize": "warn",
+        "useExhaustiveDependencies": "warn",
+        "noUnusedVariables": "warn",
+        "noUnusedImports": "warn",
+        "noInvalidGridAreas": "warn",
+        "noInnerDeclarations": "warn"
+      },
+      "a11y": {
+        "useButtonType": "warn",
+        "useAriaPropsSupportedByRole": "warn",
+        "useSemanticElements": "warn",
+        "noLabelWithoutControl": "warn"
+      }
+    }
+  }
 }

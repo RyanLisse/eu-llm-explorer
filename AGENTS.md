@@ -4,8 +4,16 @@ This project uses **Ultracite**, a zero-config preset that enforces strict code 
 
 ## Quick Reference
 
+Project gates (use these — they are what CI and agents run):
+
+- **Lint (gate)**: `npm run lint` — runs `biome lint .` (linter only, non-mutating, exits 0). Intentionally excludes the formatter so the gate stays green on the existing tree; see the adoption-baseline comment in `biome.jsonc`.
+- **Format**: `npm run format` — runs `ultracite fix` (Biome formatter + safe fixes, write mode).
+- **Test**: `npm test` — Node test suites plus Vitest suites. **Typecheck**: `npm run typecheck`. **Build**: `npm run build`.
+
+Direct Ultracite/Biome commands (equivalent engine, useful for ad-hoc runs):
+
 - **Format code**: `npm exec -- ultracite fix`
-- **Check for issues**: `npm exec -- ultracite check`
+- **Check for issues** (lint + format): `npm exec -- ultracite check`
 - **Diagnose setup**: `npm exec -- ultracite doctor`
 
 Biome (the underlying engine) provides robust linting and formatting. Most issues are automatically fixable.

@@ -1,4 +1,5 @@
 import { createClient, type Client, type Row } from "@libsql/client/web";
+import { CATALOG } from "@/data";
 import type {
   CoverageRegionView,
   ModelRouteInput,
@@ -8,6 +9,34 @@ import type {
   Tier,
   VendorScopeView,
 } from "@/domain";
+
+type BenchmarkFields = Pick<
+  ModelRouteInput,
+  "benchmarkSource" | "codingIndex" | "intelligenceIndex" | "reasoningScore"
+>;
+
+const benchmarkFieldsByRouteId = new Map<string, BenchmarkFields>(
+  CATALOG.map((route) => [
+    String(route.id),
+    {
+      intelligenceIndex: route.intelligenceIndex,
+      codingIndex: route.codingIndex,
+      reasoningScore: route.reasoningScore,
+      benchmarkSource: route.benchmarkSource,
+    },
+  ]),
+);
+
+export const mergeStaticBenchmarkFields = (route: ModelRouteInput): ModelRouteInput => {
+  const staticFields = benchmarkFieldsByRouteId.get(String(route.id));
+  return {
+    ...route,
+    intelligenceIndex: route.intelligenceIndex ?? staticFields?.intelligenceIndex ?? null,
+    codingIndex: route.codingIndex ?? staticFields?.codingIndex ?? null,
+    reasoningScore: route.reasoningScore ?? staticFields?.reasoningScore ?? null,
+    benchmarkSource: route.benchmarkSource || staticFields?.benchmarkSource || "",
+  };
+};
 
 const config = () => {
   const url = process.env.TURSO_DATABASE_URL;
@@ -52,28 +81,33 @@ export const loadModelRoutesFromTurso = async (): Promise<ReadonlyArray<ModelRou
       FROM model_routes
       ORDER BY tier, maker, name
     `);
-    return result.rows.map((row) => ({
-      id: asString(row, "id"),
-      name: asString(row, "name"),
-      maker: asString(row, "maker"),
-      route: asString(row, "route"),
-      providers: asStringArray(row, "providers_json"),
-      capabilities: asStringArray(row, "capabilities_json") as ReadonlyArray<Capability>,
-      tier: asString(row, "tier") as Tier,
-      mode: asString(row, "mode") as ModelRouteInput["mode"],
-      openness: asString(row, "openness") as ModelRouteInput["openness"],
-      inputPrice: asNumber(row, "input_price"),
-      outputPrice: asNumber(row, "output_price"),
-      throughput: asNumber(row, "throughput"),
-      ttft: asNumber(row, "ttft"),
-      intelligenceIndex: asNullableNumber(row, "intelligence_index"),
-      latest: asBoolean(row, "latest"),
-      note: asString(row, "note"),
-      slaPct: asNullableNumber(row, "sla_pct"),
-      observedUptime: asNullableNumber(row, "observed_uptime"),
-      availabilityRisk: asString(row, "availability_risk") as ModelRouteInput["availabilityRisk"],
-      reliabilityNote: asString(row, "reliability_note"),
-    }));
+return result.rows.map((row) =>
+      mergeStaticBenchmarkFields({
+        id: asString(row, "id"),
+        name: asString(row, "name"),
+        maker: asString(row, "maker"),
+        route: asString(row, "route"),
+        providers: asStringArray(row, "providers_json"),
+        capabilities: asStringArray(row, "capabilities_json") as ReadonlyArray<Capability>,
+        tier: asString(row, "tier") as Tier,
+        mode: asString(row, "mode") as ModelRouteInput["mode"],
+        openness: asString(row, "openness") as ModelRouteInput["openness"],
+        inputPrice: asNumber(row, "input_price"),
+        outputPrice: asNumber(row, "output_price"),
+        throughput: asNumber(row, "throughput"),
+        ttft: asNumber(row, "ttft"),
+        intelligenceIndex: asNullableNumber(row, "intelligence_index"),
+        latest: asBoolean(row, "latest"),
+        note: asString(row, "note"),
+        slaPct: asNullableNumber(row, "sla_pct"),
+        observedUptime: asNullableNumber(row, "observed_uptime"),
+        availabilityRisk: asString(row, "availability_risk") as ModelRouteInput["availabilityRisk"],
+        reliabilityNote: asString(row, "reliability_note"),
+        codingIndex: null,
+        reasoningScore: null,
+        benchmarkSource: "",
+      }),
+    );
   });
 
 export const loadProviderCoverageFromTurso = async (): Promise<ReadonlyArray<ProviderCoverageView> | null> =>

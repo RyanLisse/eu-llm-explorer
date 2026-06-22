@@ -104,17 +104,17 @@ for (const route of CATALOG) {
   }
 }
 assert(
-  ALL_PROVIDER_EU_COVERAGE.length === 406,
-  `Expected 406 qualifying provider coverage rows, got ${ALL_PROVIDER_EU_COVERAGE.length}.`,
+  ALL_PROVIDER_EU_COVERAGE.length === 419,
+  `Expected 419 qualifying provider coverage rows, got ${ALL_PROVIDER_EU_COVERAGE.length}.`,
 );
 assert(
   PROVIDER_COVERAGE_SUMMARIES.length === 11,
   `Expected 11 provider coverage summaries, got ${PROVIDER_COVERAGE_SUMMARIES.length}.`,
 );
 assert(VENDOR_SCOPE_AUDIT.length === 22, `Expected 22 vendor-scope rows, got ${VENDOR_SCOPE_AUDIT.length}.`);
-assert(AWS_BEDROCK_EU_COVERAGE.length === 74, `Expected 74 AWS Bedrock EU rows, got ${AWS_BEDROCK_EU_COVERAGE.length}.`);
-assert(REQUESTY_EU_COVERAGE.length === 121, `Expected 121 Requesty EU Router rows, got ${REQUESTY_EU_COVERAGE.length}.`);
-assert(overlaps.length === 58, `Expected 58 multi-vendor overlap families, got ${overlaps.length}.`);
+assert(AWS_BEDROCK_EU_COVERAGE.length === 77, `Expected 77 AWS Bedrock EU rows, got ${AWS_BEDROCK_EU_COVERAGE.length}.`);
+assert(REQUESTY_EU_COVERAGE.length === 135, `Expected 135 Requesty EU Router rows, got ${REQUESTY_EU_COVERAGE.length}.`);
+assert(overlaps.length === 61, `Expected 61 multi-vendor overlap families, got ${overlaps.length}.`);
 assert(
   overlaps.some((row) => row.platforms.includes("Requesty EU Router")),
   "Expected at least one multi-vendor overlap family to include Requesty EU Router.",

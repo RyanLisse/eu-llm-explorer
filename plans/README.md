@@ -33,7 +33,7 @@ Status values: TODO | IN PROGRESS | DONE | BLOCKED (with one-line reason) | REJE
 - `npm run coverage:audit` — passed; static and Turso counts matched.
 - `npm run lint` — now passes through a scoped Biome lint baseline for agent/data/test code; `npm run check` remains the full Ultracite audit and still reports the existing large style-format baseline.
 - `qlty check --all` — runs locally and reports a documented baseline of 3 issues: Dockerfile `apk add` version pinning plus `esbuild@0.28.0` and nested `postcss@8.4.31` advisories.
-- `npm run coverage:live-audit` — now performs only meaningful live checks, but currently fails from real source drift: AWS Bedrock (+3 live rows), Requesty (+14 live rows), Nebius (+3 live rows), Google Vertex (-1 static row), and Mistral (-5 static rows). Catalog refresh is a separate data update.
+- `npm run coverage:live-audit` — passed after the June 22, 2026 source refresh; static rows match live AWS Bedrock, Requesty, Nebius, Google Vertex, Azure, Scaleway, STACKIT, Mistral, OVHcloud, and IONOS sources.
 - `npm audit --audit-level=moderate` — reported moderate Next/PostCSS advisory through nested `node_modules/next/node_modules/postcss@8.4.31`.
 - Browser smoke: direct `/?tab=presentation`, then click Compare — vendor data appeared, so the suspected empty-data tab-switch bug was rejected.
 

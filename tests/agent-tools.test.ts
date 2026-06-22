@@ -28,6 +28,7 @@ test("exports shared initial Explorer filters", () => {
     metric: "throughput",
     sort: "reliability",
     minReliability: 0,
+    minIntelligence: 0,
     search: "",
   });
 });
