@@ -285,6 +285,8 @@ const toView = (r: ScoredRoute): RouteView => ({
   ttft: r.ttft,
   latest: r.latest,
   note: r.note,
+  contextWindow: r.contextWindow,
+  maxOutput: Option.getOrNull(r.maxOutput),
   slaPct: Option.getOrNull(r.slaPct),
   observedUptime: Option.getOrNull(r.observedUptime),
   availabilityRisk: r.availabilityRisk,

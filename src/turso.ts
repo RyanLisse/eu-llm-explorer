@@ -77,7 +77,7 @@ export const loadModelRoutesFromTurso = async (): Promise<ReadonlyArray<ModelRou
   withClient(async (client) => {
     const result = await client.execute(`
       SELECT id, name, maker, route, providers_json, capabilities_json, tier, mode, openness, input_price, output_price, throughput, ttft,
-             intelligence_index, latest, note, sla_pct, observed_uptime, availability_risk, reliability_note
+             intelligence_index, latest, note, context_window, max_output, sla_pct, observed_uptime, availability_risk, reliability_note
       FROM model_routes
       ORDER BY tier, maker, name
     `);
@@ -99,6 +99,8 @@ return result.rows.map((row) =>
         intelligenceIndex: asNullableNumber(row, "intelligence_index"),
         latest: asBoolean(row, "latest"),
         note: asString(row, "note"),
+        contextWindow: asNumber(row, "context_window"),
+        maxOutput: asNullableNumber(row, "max_output"),
         slaPct: asNullableNumber(row, "sla_pct"),
         observedUptime: asNullableNumber(row, "observed_uptime"),
         availabilityRisk: asString(row, "availability_risk") as ModelRouteInput["availabilityRisk"],

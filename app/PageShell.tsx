@@ -7,10 +7,11 @@ import type { ExplorerData } from "@/services";
 import { APP_TABS, AZURE_COMPARE_VENDOR_KEY, DEFAULT_COMPARE_STATE, type AppTab, type UiTheme } from "@/agent/constants";
 import { activeTabAtom, compareStateAtom, uiStateAtom } from "@/atoms";
 import { Explorer } from "./Explorer";
+import { ModelCatalog } from "./ModelCatalog";
 import { Chat } from "./Chat";
 import { AgentPresentation } from "./AgentPresentation";
 import { ResearchBook } from "./ResearchBook";
-import { MessageSquare, SlidersHorizontal, BookOpen, Sun, Moon, Presentation } from "lucide-react";
+import { MessageSquare, SlidersHorizontal, BookOpen, Sun, Moon, Presentation, LayoutGrid } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
@@ -19,8 +20,8 @@ export function PageShell({ data }: { readonly data: ExplorerData }) {
   const router = useRouter();
   const pathname = usePathname();
 
-  const rawTab = searchParams.get("tab") || "explorer";
-  const requestedTab = (APP_TABS as ReadonlyArray<string>).includes(rawTab) ? (rawTab as AppTab) : "explorer";
+  const rawTab = searchParams.get("tab") || "catalog";
+  const requestedTab = (APP_TABS as ReadonlyArray<string>).includes(rawTab) ? (rawTab as AppTab) : "catalog";
   // "compare" is merged into the model-first explorer; alias legacy links/agent calls.
   const tabParam: AppTab = requestedTab === "compare" ? "explorer" : requestedTab;
   const vendorParam = searchParams.get("vendor") || "Mistral La Plateforme";
@@ -145,6 +146,10 @@ export function PageShell({ data }: { readonly data: ExplorerData }) {
           <Tabs value={activeTab} onValueChange={(value) => handleTabChange(value as AppTab)} className="main-tabs">
             <div className="main-tabs-bar">
               <TabsList>
+                <TabsTrigger value="catalog" onClick={() => handleTabChange("catalog")}>
+                  <LayoutGrid size={13} aria-hidden="true" />
+                  Catalog
+                </TabsTrigger>
                 <TabsTrigger value="explorer" onClick={() => handleTabChange("explorer")}>
                   <SlidersHorizontal size={13} aria-hidden="true" />
                   Models
@@ -158,6 +163,14 @@ export function PageShell({ data }: { readonly data: ExplorerData }) {
                   Book
                 </TabsTrigger>
               </TabsList>
+            </div>
+
+            <div className="main-tab-panel" hidden={activeTab !== "catalog"}>
+              {activeTab === "catalog" ? (
+                <div className="wrap">
+                  <ModelCatalog routes={data.routes} />
+                </div>
+              ) : null}
             </div>
 
             <div className="main-tab-panel" hidden={activeTab !== "explorer"}>

@@ -1,6 +1,10 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { buildVendorDecisionPacket, formatDecisionPacketMarkdown, type DecisionPacketData } from "../src/decisionPacket";
+import {
+  buildVendorDecisionPacket,
+  type DecisionPacketData,
+  formatDecisionPacketMarkdown,
+} from "../src/decisionPacket";
 
 const route = {
   id: "mistral-large-3",
@@ -22,6 +26,8 @@ const route = {
   benchmarkSource: "https://artificialanalysis.ai/models/mistral-large-3",
   latest: true,
   note: "Frontier-class route.",
+  contextWindow: 262_144,
+  maxOutput: null,
   slaPct: 99.9,
   observedUptime: null,
   availabilityRisk: "low",
@@ -41,7 +47,16 @@ const fixture: DecisionPacketData = {
       tier: "A",
       requirementFit: "sovereign",
       sourceType: "official",
-      regions: [{ code: "fr-par", name: "Paris", inRegion: true, euGeo: false, global: false, legacyEol: null }],
+      regions: [
+        {
+          code: "fr-par",
+          name: "Paris",
+          inRegion: true,
+          euGeo: false,
+          global: false,
+          legacyEol: null,
+        },
+      ],
       source: "https://example.com/scaleway",
       evidenceNote: "EU sovereign platform evidence.",
     },
@@ -52,7 +67,16 @@ const fixture: DecisionPacketData = {
       tier: "B",
       requirementFit: "eu-residency",
       sourceType: "official",
-      regions: [{ code: "eu-central-1", name: "Frankfurt", inRegion: true, euGeo: false, global: false, legacyEol: null }],
+      regions: [
+        {
+          code: "eu-central-1",
+          name: "Frankfurt",
+          inRegion: true,
+          euGeo: false,
+          global: false,
+          legacyEol: null,
+        },
+      ],
       source: "https://example.com/aws",
       evidenceNote: "EU residency evidence.",
     },
@@ -92,7 +116,11 @@ const fixture: DecisionPacketData = {
 };
 
 test("builds a Tier A sovereignty decision packet", () => {
-  const packet = buildVendorDecisionPacket(fixture, "Scaleway Generative APIs", "2026-06-19T00:00:00.000Z");
+  const packet = buildVendorDecisionPacket(
+    fixture,
+    "Scaleway Generative APIs",
+    "2026-06-19T00:00:00.000Z"
+  );
 
   assert.ok(packet);
   assert.equal(packet.verdict.tier, "A");
@@ -106,12 +134,20 @@ test("builds a Tier A sovereignty decision packet", () => {
 });
 
 test("builds a Tier B residency packet with CLOUD Act caveat", () => {
-  const packet = buildVendorDecisionPacket(fixture, "AWS Bedrock EU", "2026-06-19T00:00:00.000Z");
+  const packet = buildVendorDecisionPacket(
+    fixture,
+    "AWS Bedrock EU",
+    "2026-06-19T00:00:00.000Z"
+  );
 
   assert.ok(packet);
   assert.equal(packet.verdict.tier, "B");
   assert.match(packet.verdict.summary, /CLOUD Act/);
-  assert.ok(packet.restrictions.some((restriction) => restriction.includes("not full EU sovereignty")));
+  assert.ok(
+    packet.restrictions.some((restriction) =>
+      restriction.includes("not full EU sovereignty")
+    )
+  );
 });
 
 test("unknown vendor key returns null", () => {

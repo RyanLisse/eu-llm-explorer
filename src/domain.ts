@@ -67,6 +67,12 @@ export const ModelRoute = Schema.Struct({
   latest: Schema.optionalWith(Schema.Boolean, { default: () => false }),
   note: Schema.String,
 
+  // Capacity dimension
+  /** Maximum input context window in tokens (vendor-published). */
+  contextWindow: Schema.Number,
+  /** Maximum output tokens per response. None = host-configured / unpublished. */
+  maxOutput: Schema.OptionFromNullOr(Schema.Number),
+
   // Reliability dimension
   /** Vendor-published monthly uptime SLA, e.g. 99.9. None = no public SLA. */
   slaPct: Schema.OptionFromNullOr(Schema.Number),
@@ -137,6 +143,8 @@ export interface RouteView {
   readonly ttft: number;
   readonly latest: boolean;
   readonly note: string;
+  readonly contextWindow: number;
+  readonly maxOutput: number | null;
   readonly slaPct: number | null;
   readonly observedUptime: number | null;
   readonly availabilityRisk: AvailabilityRisk;

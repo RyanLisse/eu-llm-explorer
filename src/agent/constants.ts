@@ -46,7 +46,7 @@ export const ALLOWED_SQL_TABLES = [
 
 export type AllowedSqlTable = (typeof ALLOWED_SQL_TABLES)[number];
 
-export const APP_TABS = ["compare", "presentation", "explorer", "research"] as const;
+export const APP_TABS = ["catalog", "compare", "presentation", "explorer", "research"] as const;
 export type AppTab = (typeof APP_TABS)[number];
 
 export const UI_THEMES = ["light", "dark"] as const;
@@ -103,7 +103,7 @@ export interface UiState {
 }
 
 export const DEFAULT_UI_STATE: UiState = {
-  activeTab: "explorer",
+  activeTab: "catalog",
   chatOpen: false,
   theme: "dark",
 };
